@@ -67,8 +67,15 @@ function getAllRecords() {
         else { v = []; }
       } else if (h === 'xingxing') {
         v = v === true || v === 'TRUE' || v === 1 || v === 'true';
+      } else if (h === 'time') {
+        // Google Sheets 会将日期字符串自动转为 Date 对象，需格式化回字符串
+        if (v instanceof Date) {
+          v = Utilities.formatDate(v, 'Asia/Shanghai', 'yyyy/M/d');
+        } else {
+          v = (v === null || v === undefined) ? '' : String(v);
+        }
       } else {
-        // Google Sheets 可能将数字/日期列返回为非字符串类型，统一转为字符串
+        // 其他字段统一转为字符串
         v = (v === null || v === undefined) ? '' : String(v);
       }
       obj[h] = v;
