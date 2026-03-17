@@ -60,14 +60,19 @@ function getAllRecords() {
   const headers = data[0];
   return data.slice(1).map(row => {
     const obj = {};
-    headers.forEach((h, i) => { obj[h] = row[i]; });
-    // combos 字段：Sheet 中存储为 JSON 字符串
-    if (typeof obj.combos === 'string') {
-      try { obj.combos = JSON.parse(obj.combos); } catch { obj.combos = []; }
-    }
-    // xingxing 字段：规范化为布尔
-    obj.xingxing = obj.xingxing === true || obj.xingxing === 'TRUE'
-                || obj.xingxing === 1    || obj.xingxing === 'true';
+    headers.forEach((h, i) => {
+      let v = row[i];
+      if (h === 'combos') {
+        if (typeof v === 'string') { try { v = JSON.parse(v); } catch { v = []; } }
+        else { v = []; }
+      } else if (h === 'xingxing') {
+        v = v === true || v === 'TRUE' || v === 1 || v === 'true';
+      } else {
+        // Google Sheets 可能将数字/日期列返回为非字符串类型，统一转为字符串
+        v = (v === null || v === undefined) ? '' : String(v);
+      }
+      obj[h] = v;
+    });
     return obj;
   });
 }

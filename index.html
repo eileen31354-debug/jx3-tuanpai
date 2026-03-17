@@ -1550,8 +1550,8 @@ function doSearch() {
 
   const results = records
     .filter(r =>
-      (r.tuanpai  || '').toLowerCase().includes(q) ||
-      (r.tuanzhang|| '').toLowerCase().includes(q)
+      String(r.tuanpai   || '').toLowerCase().includes(q) ||
+      String(r.tuanzhang || '').toLowerCase().includes(q)
     )
     .sort((a, b) => (b.xingxing ? 1 : 0) - (a.xingxing ? 1 : 0));
   if (!results.length) { container.innerHTML = '<div class="no-result">没有找到相关团牌记录</div>'; return; }
