@@ -1,0 +1,1696 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>剑网三 团牌记录</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='5' fill='%23F7F4EF'/><rect x='2' y='2' width='28' height='28' rx='3.5' fill='none' stroke='%239A7230' stroke-width='2.5'/><text x='16' y='24' font-size='19' font-family='serif' text-anchor='middle' fill='%239A7230' font-weight='bold'>录</text></svg>">
+  <style>
+    :root {
+      --bg:       #F7F4EF;   /* 豆乳/宣纸底色 */
+      --surface:  #FFFFFF;
+      --card:     #F2EEE7;   /* 浅暖灰，用于表头、chip 底 */
+      --accent:   #9A7230;   /* 古铜金，白底可读 */
+      --accent-light: rgba(154,114,48,0.1);
+      --text:     #2C2820;
+      --text-dim: #8A7F72;
+      --green:    #3D8A5C;
+      --orange:   #C07828;
+      --red:      #A82838;
+      --border:   #DDD8CF;
+      --input-bg: #FFFFFF;
+      --star:     #C09020;
+      --shadow:   0 2px 12px rgba(60,40,10,0.07);
+      --shadow-sm:0 1px 4px  rgba(60,40,10,0.06);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: '微软雅黑', 'Microsoft YaHei', sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(180deg, #FFFEF9 0%, #FDFAF3 100%);
+      border-bottom: 1px solid rgba(201,160,99,0.38);
+      box-shadow: 0 1px 10px rgba(60,40,10,0.06), 0 3px 22px rgba(60,40,10,0.03);
+      padding: 15px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .header-brand { display: flex; flex-direction: column; gap: 3px; padding-left: 5px; }
+    header h1 {
+      font-size: 1.42rem;
+      color: var(--accent);
+      letter-spacing: 4px;
+      font-weight: bold;
+      display: flex; align-items: baseline; gap: 0;
+      line-height: 1;
+      position: relative;
+    }
+    .h1-icon {
+      font-size: 1em;
+      margin-right: 9px;
+      color: #C9A063;
+      filter: drop-shadow(0 0 4px rgba(201,160,99,0.55));
+      display: inline-block;
+      line-height: 1;
+    }
+    .h1-count {
+      font-size: 0.46em;
+      font-weight: normal;
+      color: rgba(154,114,48,0.62);
+      letter-spacing: 0;
+      vertical-align: super;
+      margin-left: 3px;
+      line-height: 1;
+    }
+    .header-sub {
+      font-size: 0.76rem;
+      color: var(--text-dim);
+      letter-spacing: 2px;
+      opacity: 0.75;
+      padding-left: 2px;
+      display: flex;
+      align-items: center;
+      gap: 0;
+      flex-wrap: wrap;
+    }
+    .header-count-sep {
+      margin: 0 8px;
+      opacity: 0.35;
+    }
+    .header-count {
+      font-size: 0.74rem;
+      color: rgba(154,114,48,0.72);
+      letter-spacing: 1.5px;
+    }
+    .header-count #headerCountNum {
+      font-weight: bold;
+      color: rgba(154,114,48,0.9);
+      letter-spacing: 0;
+      margin: 0 2px;
+    }
+    .header-season {
+      font-size: 0.7rem;
+      color: rgba(154,114,48,0.58);
+      letter-spacing: 4px;
+      font-weight: bold;
+      border: 1px solid rgba(154,114,48,0.22);
+      padding: 5px 11px;
+      border-radius: 2px;
+      background: rgba(253,248,238,0.6);
+      white-space: nowrap;
+    }
+
+    /* ── Header 右侧：数据中心区域 ── */
+    .header-actions {
+      display: flex; flex-direction: column; align-items: flex-end; gap: 7px;
+    }
+    .header-data-center {
+      display: flex; align-items: center; gap: 10px;
+    }
+    /* 同步状态徽章 */
+    .sync-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 0.72rem; padding: 3px 10px; border-radius: 2px;
+      border: 1px solid transparent; transition: all 0.3s;
+      white-space: nowrap; cursor: default; letter-spacing: 0.5px;
+    }
+    .sync-badge.hidden  { display: none; }
+    .sync-badge.syncing { color: rgba(154,114,48,0.65); border-color: rgba(154,114,48,0.22); background: rgba(253,248,238,0.5); }
+    .sync-badge.ok      { color: rgba(61,138,92,0.8);   border-color: rgba(61,138,92,0.25);  background: rgba(61,138,92,0.06); }
+    .sync-badge.error   { color: rgba(168,40,56,0.8);   border-color: rgba(168,40,56,0.25);  background: rgba(168,40,56,0.06); }
+    @keyframes spin-sync { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    .sync-badge.syncing .sync-icon { display: inline-block; animation: spin-sync 1s linear infinite; }
+    /* 手动备份幽灵按钮 */
+    .btn-backup {
+      background: none;
+      border: 1px solid rgba(154,114,48,0.35); color: var(--accent);
+      padding: 3px 14px; border-radius: 2px; cursor: pointer;
+      font-size: 0.72rem; font-family: inherit; letter-spacing: 1px;
+      transition: all 0.2s; white-space: nowrap;
+    }
+    .btn-backup:hover:not(:disabled) { background: var(--accent-light); border-color: var(--accent); }
+    .btn-backup:disabled { opacity: 0.55; cursor: default; }
+
+    /* ── Nav ── */
+    nav { display: flex; background: #FDFAF5; border-bottom: 1px solid rgba(201,160,99,0.22); padding: 0 32px; }
+    nav button {
+      position: relative;
+      background: none; border: none; color: var(--text-dim);
+      padding: 13px 28px; cursor: pointer; font-size: 0.95rem; font-family: inherit;
+      border-bottom: 2px solid transparent; transition: all 0.2s;
+    }
+    nav button.active { color: var(--accent); border-bottom-color: transparent; font-weight: bold; }
+    nav button.active::after {
+      content: '';
+      position: absolute;
+      bottom: -2px; left: 22%; right: 22%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #D4AF37 30%, #C9A063 70%, transparent);
+      border-radius: 1px;
+    }
+    nav button:hover:not(.active) { color: var(--text); }
+
+    /* ── Layout ── */
+    main { max-width: 1200px; margin: 0 auto; padding: 28px 32px; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── Card ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow);
+    }
+    .card-title {
+      font-size: 1.05rem; color: var(--accent); font-weight: bold;
+      margin-bottom: 20px; padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+      letter-spacing: 1px;
+    }
+
+    /* ── Form ── */
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    label { font-size: 0.8rem; color: var(--text-dim); letter-spacing: 0.5px; }
+
+    input[type="text"], textarea, select {
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.9rem;
+      padding: 8px 12px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      width: 100%;
+    }
+    input[type="text"]:hover, textarea:hover, select:hover {
+      border-color: rgba(93,117,153,0.58);
+    }
+    input[type="text"]:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: #C9A063;
+      box-shadow: 0 0 0 3px rgba(201,160,99,0.2);
+    }
+    input::placeholder, textarea::placeholder { color: #C8C0B4; }
+    textarea { resize: vertical; min-height: 70px; }
+
+    /* ── Section divider ── */
+    .section-divider {
+      display: flex; align-items: center; gap: 12px;
+      margin: 24px 0 16px; color: var(--accent); font-size: 0.72rem; letter-spacing: 2.5px; font-weight: bold;
+    }
+    .section-divider::before, .section-divider::after {
+      content: ''; flex: 1; height: 1px; background: var(--border);
+    }
+    .section-divider span {
+      background: #FDF8EE; border: 1px solid #E8D9B8;
+      padding: 2px 10px; border-radius: 3px; letter-spacing: 3px;
+    }
+
+    /* ── Rating ── */
+    .rating-group { display: flex; gap: 10px; flex-wrap: wrap; }
+    .rating-btn {
+      display: flex; align-items: center; gap: 6px; cursor: pointer;
+      padding: 7px 18px; border-radius: 20px; border: 1.5px solid var(--border);
+      font-size: 0.88rem; transition: all 0.2s; user-select: none; color: var(--text-dim);
+      background: #FFFFFF;
+    }
+    .rating-btn input { display: none; }
+    .rating-btn.bilei:hover { background: rgba(184,64,80,0.06);  border-color: var(--red);    color: var(--red); }
+    .rating-btn.buqu:hover  { background: rgba(192,120,40,0.06); border-color: var(--orange); color: var(--orange); }
+    .rating-btn.keyi:hover  { background: rgba(61,138,92,0.06);  border-color: var(--green);  color: var(--green); }
+    .rating-btn.bilei.selected { background: rgba(184,64,80,0.14);  border: 2px solid var(--red);    color: var(--red);    font-weight: bold; box-shadow: 0 2px 8px rgba(184,64,80,0.18); }
+    .rating-btn.buqu.selected  { background: rgba(192,120,40,0.14); border: 2px solid var(--orange); color: var(--orange); font-weight: bold; box-shadow: 0 2px 8px rgba(192,120,40,0.18); }
+    .rating-btn.keyi.selected  { background: rgba(61,138,92,0.14);  border: 2px solid var(--green);  color: var(--green);  font-weight: bold; box-shadow: 0 2px 8px rgba(61,138,92,0.18); }
+    .rating-btn.keyi.selected.trust-glow { border: 2.5px solid #C9A063; box-shadow: 0 0 0 3px rgba(201,160,99,0.18), 0 3px 12px rgba(201,160,99,0.28); }
+    /* star inside 可以再去 */
+    .keyi-star {
+      display: none;
+      margin-left: 8px;
+      font-style: normal;
+      cursor: pointer;
+      font-size: 1.25rem;
+      line-height: 1;
+      color: #BBBBBB;
+      padding: 2px 4px;
+      border-radius: 50%;
+      transition: color 0.2s, transform 0.2s, text-shadow 0.2s, background 0.2s;
+    }
+    .keyi-star:hover {
+      color: #DDA520;
+      background: rgba(221,165,32,0.12);
+      transform: scale(1.15);
+    }
+    .rating-btn.keyi.selected .keyi-star {
+      display: inline-block;
+      animation: starAppear 0.38s cubic-bezier(0.34,1.56,0.64,1) forwards;
+    }
+    .keyi-star.lit {
+      color: #DDA520 !important;
+      text-shadow: 0 0 10px rgba(221,165,32,0.75), 0 0 22px rgba(221,165,32,0.35);
+      transform: scale(1.25);
+    }
+    .keyi-star.lit:hover {
+      color: #DDA520;
+      background: rgba(221,165,32,0.15);
+      transform: scale(1.35);
+    }
+    .keyi-star.bounce {
+      animation: starLitBounce 0.45s cubic-bezier(0.34,1.56,0.64,1) forwards;
+    }
+    @keyframes starAppear {
+      0%   { transform: scale(0) rotate(-40deg); opacity: 0; }
+      60%  { transform: scale(1.45) rotate(8deg); opacity: 1; }
+      100% { transform: scale(1) rotate(0deg); opacity: 1; }
+    }
+    @keyframes starLitBounce {
+      0%   { transform: scale(1.25); }
+      35%  { transform: scale(1.8); }
+      65%  { transform: scale(1.05); }
+      100% { transform: scale(1.25); }
+    }
+
+    /* ── Combo builder — flex-column; every row shares the same 4-cell structure ── */
+    .combo-builder {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    /* Every horizontal row (pool row, header row, each input row) uses this */
+    .combo-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .combo-row.stretch { align-items: stretch; }
+    /* fuben cell: 60 share; xinfa cell: 40 share → exactly 60%/40% of flex space */
+    .fuben-cell { flex: 60; min-width: 0; }
+    .xinfa-cell  { flex: 40; min-width: 0; }
+    /* fixed-size separator slot — reduced to 4px; no visible bar, just air */
+    .sep-cell {
+      flex: 0 0 4px; width: 4px; flex-shrink: 0;
+    }
+    /* fixed-size delete slot — 26px in every row */
+    .del-cell-ph {
+      flex: 0 0 26px; width: 26px; flex-shrink: 0; visibility: hidden;
+    }
+
+    /* column header labels */
+    .crh-col-label { font-size: 0.78rem; color: var(--text-dim); padding-left: 2px; letter-spacing: 0.5px; }
+
+    /* individual pool panel internal layout */
+    .pool-panel {
+      width: 100%; box-sizing: border-box;
+      background: #F7F3EC; border: 1px solid #E2D9CC;
+      border-radius: 8px; padding: 10px 12px;
+      display: flex; flex-direction: column; gap: 8px; height: 100%;
+    }
+    .pool-panel-header {
+      display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;
+    }
+    .pool-panel-label {
+      font-size: 0.68rem; color: #A89880; letter-spacing: 2px; font-weight: bold;
+    }
+    .pool-action-btn {
+      background: none; border: 1px solid #DDD4C8; border-radius: 5px;
+      padding: 2px 8px; font-size: 0.72rem; color: #B0A898;
+      cursor: pointer; font-family: inherit; transition: all 0.15s;
+    }
+    .pool-action-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+
+    /* collapsible add-fuben row — hidden by default */
+    .fuben-add-row { display: none; gap: 5px; align-items: center; }
+    .fuben-add-row.open { display: flex; }
+    .fuben-add-row input { flex: 1; font-size: 0.78rem; padding: 4px 9px; border-color: #C9A063; color: var(--text); }
+
+    /* fuben chips */
+    .fuben-pool { display: flex; flex-wrap: wrap; gap: 5px; align-items: flex-start; flex: 1; }
+    .fuben-chip {
+      background: #FFFFFF; border: 1px solid #D8D0C4;
+      border-radius: 12px; padding: 3px 11px; font-size: 0.8rem;
+      cursor: pointer; transition: all 0.15s; color: var(--text-dim); user-select: none;
+    }
+    .fuben-chip:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+    .fuben-chip.selected { background: var(--accent-light); border-color: var(--accent); color: var(--accent); font-weight: bold; }
+    .fuben-pool-hint { font-size: 0.78rem; color: #BBAA99; }
+
+    /* xinfa chips — uniform grid, 4 per row */
+    .xinfa-pool { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; flex: 1; }
+    .xinfa-chip {
+      background: rgba(74,110,138,0.07); border: 1px solid rgba(74,110,138,0.28);
+      border-radius: 8px; padding: 4px 6px; font-size: 0.8rem; text-align: center;
+      cursor: pointer; transition: all 0.15s; color: #4A6E8A; user-select: none;
+    }
+    .xinfa-chip:hover { background: rgba(74,110,138,0.16); border-color: #4A6E8A; }
+    .xinfa-chip.selected {
+      background: rgba(93,117,153,0.15); border-color: #5D7599;
+      color: #3A5878; font-weight: bold;
+      box-shadow: 0 0 0 2px rgba(93,117,153,0.18);
+    }
+    .xinfa-chip.role-heal.selected  { background: rgba(61,138,92,0.16); border-color: #2D7A4E; color: #1E6040; box-shadow: 0 0 0 2px rgba(45,122,78,0.16); }
+    .xinfa-chip.role-tank.selected  { background: rgba(154,114,48,0.16); border-color: #8A6228; color: #6A4A18; box-shadow: 0 0 0 2px rgba(154,114,48,0.18); }
+    /* healer — green */
+    .xinfa-chip.role-heal { background: rgba(61,138,92,0.08); border-color: rgba(61,138,92,0.35); color: #2D7A4E; }
+    .xinfa-chip.role-heal:hover { background: rgba(61,138,92,0.18); border-color: #3D8A5C; }
+    /* tank — warm gold */
+    .xinfa-chip.role-tank { background: rgba(154,114,48,0.09); border-color: rgba(154,114,48,0.38); color: #7A5820; }
+    .xinfa-chip.role-tank:hover { background: rgba(154,114,48,0.18); border-color: var(--accent); color: var(--accent); }
+    .xinfa-pool-hint { font-size: 0.78rem; color: #BBAA99; grid-column: 1 / -1; }
+
+    /* xinfa manage modal chip */
+    .xinfa-manage-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 3px 8px 3px 12px; font-size: 0.82rem; color: var(--text);
+    }
+    .xinfa-manage-chip button {
+      background: none; border: none; cursor: pointer; color: #C0B8B0;
+      font-size: 0.9rem; line-height: 1; padding: 0; transition: color 0.15s;
+    }
+    .xinfa-manage-chip button:hover { color: var(--red); }
+
+    /* ── Combo input rows — 哑光黛蓝描边 ── */
+    /* 输入框填满 cell div；cell div 是真正的 flex 项，与 pool 行保持一致 */
+
+    .combo-fuben-input, .combo-xinfa-input {
+      display: block; width: 100%;
+      border-color: rgba(93,117,153,0.32);
+      background: linear-gradient(180deg, #FFFFFF 0%, #F7F5F2 100%);
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .combo-fuben-input:hover, .combo-xinfa-input:hover {
+      border-color: rgba(93,117,153,0.58);
+    }
+    .combo-fuben-input:focus, .combo-xinfa-input:focus {
+      outline: none;
+      border-color: #5D7599;
+      box-shadow: 0 0 0 3px rgba(93,117,153,0.14);
+    }
+    /* delete button exactly fills the del-cell */
+    .combo-row-del {
+      flex: 0 0 26px; width: 26px; height: 26px; flex-shrink: 0;
+      -webkit-appearance: none; appearance: none;
+      padding: 0; box-sizing: border-box;
+      background: none; border: none; cursor: pointer; color: #D0C8C0;
+      font-size: 1.1rem; line-height: 26px; text-align: center;
+      transition: color 0.15s; border-radius: 50%;
+    }
+    .combo-row-del:hover { color: var(--red); background: rgba(168,40,56,0.06); }
+    .btn-add-row {
+      background: none; border: 1px dashed var(--border); color: var(--text-dim);
+      border-radius: 6px; padding: 6px 0; cursor: pointer; font-family: inherit;
+      font-size: 0.82rem; width: 100%; transition: all 0.2s;
+    }
+    .btn-add-row:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Buttons ── */
+    .btn-sm {
+      background: var(--surface); border: 1px solid var(--border); color: var(--text-dim);
+      border-radius: 7px; padding: 6px 14px; cursor: pointer; font-family: inherit;
+      font-size: 0.85rem; transition: all 0.2s; white-space: nowrap;
+    }
+    .btn-sm:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-add-combo {
+      background: #FFFFFF; border: 1.5px solid var(--green); color: var(--green);
+      border-radius: 7px; padding: 8px 16px; cursor: pointer; font-family: inherit;
+      font-size: 0.85rem; transition: all 0.2s; white-space: nowrap; font-weight: bold;
+    }
+    .btn-add-combo:hover { background: rgba(61,138,92,0.07); }
+
+    .form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 36px; }
+    .btn-primary {
+      background: linear-gradient(145deg, #DCC070 0%, #C49A3C 48%, #A67C28 100%);
+      border: 1px solid rgba(172,132,40,0.45);
+      color: #FFFAEA; border-radius: 9px; padding: 10px 28px; cursor: pointer;
+      font-family: inherit; font-size: 0.95rem; font-weight: bold;
+      letter-spacing: 1px; transition: background 0.2s, box-shadow 0.2s;
+      box-shadow: 0 2px 10px rgba(172,132,40,0.28), inset 0 1px 0 rgba(255,240,160,0.28);
+    }
+    .btn-primary:hover {
+      background: linear-gradient(145deg, #ECD480 0%, #D4AA48 48%, #B88830 100%);
+      box-shadow: 0 4px 16px rgba(172,132,40,0.40), inset 0 1px 0 rgba(255,240,160,0.32);
+    }
+    .btn-reset {
+      background: none; border: 1px solid var(--border); color: var(--text-dim);
+      border-radius: 9px; padding: 10px 20px; cursor: pointer; font-family: inherit;
+      font-size: 0.9rem; transition: all 0.2s;
+    }
+    .btn-reset:hover { border-color: var(--text-dim); color: var(--text); }
+
+    /* ── Table ── */
+    .filter-bar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+    .filter-pill {
+      background: var(--surface); border: 1px solid var(--border); color: var(--text-dim);
+      border-radius: 16px; padding: 5px 14px; cursor: pointer; font-family: inherit;
+      font-size: 0.82rem; transition: all 0.2s;
+    }
+    .filter-pill:hover { border-color: rgba(93,117,153,0.50); color: var(--text); }
+    .filter-pill.active       { background: var(--accent-light); color: var(--accent); border-color: var(--accent); font-weight: bold; }
+    .filter-pill.bilei.active { color: var(--red);    border-color: var(--red);    background: rgba(184,64,80,0.07); }
+    .filter-pill.buqu.active  { color: var(--orange); border-color: var(--orange); background: rgba(192,120,40,0.07); }
+    .filter-pill.keyi.active  { color: var(--green);  border-color: var(--green);  background: rgba(61,138,92,0.07); }
+    .filter-pill.starred.active{color: var(--star);   border-color: var(--star);   background: rgba(192,144,32,0.07); }
+
+    .table-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .table-toolbar .count { color: var(--text-dim); font-size: 0.88rem; }
+    .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); }
+    table { width: 100%; border-collapse: collapse; font-size: 0.88rem; background: var(--surface); }
+    thead tr { background: var(--card); }
+    th { padding: 14px 14px; text-align: left; color: #8A6438; font-weight: bold; font-size: 0.8rem; letter-spacing: 0.5px; white-space: nowrap; border-bottom: 2px solid var(--border); }
+    th.th-c { text-align: center; }
+    tbody tr { border-bottom: 1px solid #EDE9E2; transition: background 0.15s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #FAF6EE; }
+    tbody tr.row-starred { background: #FFFCF0; }
+    tbody tr.row-starred:hover { background: #FFF5D8; }
+    td { padding: 14px 14px; vertical-align: middle; color: var(--text); }
+    td.rating-cell { text-align: center; white-space: nowrap; }
+    td.rating-cell .rating-badge {
+      display: inline-block;
+      font-weight: bold; font-size: 0.78rem; letter-spacing: 0.3px;
+      border-radius: 20px; padding: 3px 10px;
+    }
+    td.rating-cell.bilei .rating-badge { color: #B83250; background: rgba(184,50,80,0.10); }
+    td.rating-cell.buqu  .rating-badge { color: #A06020; background: rgba(192,100,32,0.09); }
+    td.rating-cell.keyi  .rating-badge { color: #267A4A; background: rgba(38,122,74,0.10);  }
+    /* empty state */
+    .empty-state { text-align: center; padding: 52px 24px; }
+    .empty-state .empty-icon { font-size: 2.2rem; opacity: 0.28; margin-bottom: 12px; }
+    .empty-state .empty-title { color: var(--text-dim); font-size: 0.9rem; font-weight: bold; margin-bottom: 6px; }
+    .empty-state .empty-hint { color: #C8C0B4; font-size: 0.78rem; }
+
+    .tuanpai-cell { display: flex; align-items: center; gap: 6px; }
+    .star-toggle {
+      background: none; border: none; cursor: pointer; font-size: 1.1rem;
+      color: #E0D8D0; transition: color 0.18s, transform 0.12s; padding: 1px 2px; flex-shrink: 0;
+    }
+    .star-toggle.starred {
+      color: #D4AF37;
+      text-shadow: 0 0 4px rgba(212,175,55,0.55), 0 0 10px rgba(212,175,55,0.28);
+    }
+    .star-toggle:hover { transform: scale(1.25); }
+    .star-toggle:not(.starred):hover { color: #C8B888; }
+
+    /* Combo chips in table */
+    .table-combos { display: flex; flex-direction: column; gap: 3px; }
+    .table-combo-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: #EEF3F9; border: 1px solid #C0D0DF;
+      border-radius: 10px; padding: 2px 8px; font-size: 0.78rem; white-space: nowrap;
+    }
+    .table-combo-chip .tcc-fuben { color: #4A6E8A; font-weight: bold; }
+    .table-combo-chip .tcc-sep   { color: #BBCCDA; font-size: 0.7rem; }
+    .table-combo-chip .tcc-xinfa { color: #7A90A0; }
+
+    .action-btns { display: flex; gap: 4px; justify-content: center; align-items: center; }
+    /* 自定义 tooltip，替代原生 title 黑色气泡 */
+    [data-tip] { position: relative; }
+    [data-tip]::after {
+      content: attr(data-tip);
+      position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+      background: rgba(36,46,62,0.84); color: #F0EDE8;
+      font-size: 0.7rem; padding: 3px 9px; border-radius: 6px;
+      white-space: nowrap; pointer-events: none;
+      opacity: 0; transition: opacity 0.15s; z-index: 20;
+    }
+    [data-tip]:hover::after { opacity: 1; }
+    /* 星标占位：无星行也保留同等宽度，确保团牌名左对齐 */
+    .star-ph { display: inline-block; width: 22px; flex-shrink: 0; }
+    .btn-icon {
+      background: none; border: none; cursor: pointer;
+      color: transparent; font-size: 1rem; padding: 5px 7px;
+      border-radius: 6px; transition: all 0.18s; line-height: 1;
+      font-family: inherit;
+    }
+    /* 图标只在行 hover 时才显现 */
+    tbody tr:hover .btn-icon        { color: #C8C0B8; }
+    tbody tr:hover .btn-icon.edit:hover { color: var(--accent); background: var(--accent-light); }
+    tbody tr:hover .btn-icon.del:hover  { color: #5D7599; background: rgba(93,117,153,0.10); }
+    .truncate { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* ── Search ── */
+    .search-bar { display: flex; gap: 10px; margin: 20px 0 10px; }
+    .search-bar input {
+      flex: 1; font-size: 1rem; padding: 11px 18px;
+      box-shadow: inset 0 1px 4px rgba(60,40,10,0.07);
+    }
+    .search-bar input:focus {
+      border-color: #C9A063;
+      box-shadow: inset 0 1px 4px rgba(60,40,10,0.07), 0 0 0 3px rgba(201,160,99,0.18);
+    }
+    .search-bar button {
+      background: var(--accent); border: none; color: #FFFFFF;
+      border-radius: 7px; padding: 11px 24px; cursor: pointer; font-family: inherit;
+      font-size: 0.9rem; transition: background 0.2s; font-weight: bold; white-space: nowrap;
+    }
+    .search-bar button:hover { background: #7A5820; }
+    /* 搜索历史 */
+    .search-history { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 20px; min-height: 0; }
+    .search-history-label { font-size: 0.75rem; color: #BBAA99; align-self: center; flex-shrink: 0; letter-spacing: 0.5px; }
+    .search-history-chip {
+      background: #F0EDE8; border: 1px solid #E0D8CE; color: #8B8078;
+      border-radius: 14px; padding: 3px 12px; font-size: 0.78rem; cursor: pointer;
+      font-family: inherit; transition: all 0.15s;
+    }
+    .search-history-chip:hover { border-color: rgba(93,117,153,0.55); color: #5D7599; background: #EAF0F7; }
+    .search-history-clear {
+      background: none; border: none; cursor: pointer; color: #C8C0B4;
+      font-size: 0.78rem; padding: 2px 6px; font-family: inherit;
+      border-radius: 5px; transition: all 0.15s; align-self: center; margin-left: 2px;
+    }
+    .search-history-clear:hover { color: #5D7599; background: rgba(93,117,153,0.10); }
+    .search-results { display: flex; flex-direction: column; gap: 14px; }
+    .search-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 20px 22px;
+      box-shadow: var(--shadow);
+      position: relative; overflow: hidden;
+    }
+    /* 角落印章 */
+    .sc-stamp {
+      position: absolute; bottom: 14px; right: 16px;
+      width: 46px; height: 46px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.45rem; font-weight: bold;
+      border: 2.5px solid; opacity: 0.08;
+      pointer-events: none; user-select: none;
+      font-family: inherit; letter-spacing: 0;
+      z-index: 1;
+    }
+    .sc-stamp.keyi  { color: var(--green); border-color: var(--green); border-radius: 50%; }
+    .sc-stamp.bilei { color: var(--red);   border-color: var(--red);   border-radius: 2px; }
+    /* 卡片标题行：评价徽章 + 团牌名 + 金星 同行中轴对齐 */
+    .sc-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+    .search-tuanpai { font-size: 1.15rem; font-weight: bold; color: #6A4820; }
+    .search-star {
+      color: #D4AF37; font-size: 1.1rem;
+      text-shadow: 0 0 4px rgba(212,175,55,0.5), 0 0 10px rgba(212,175,55,0.25);
+    }
+    /* 评价徽章 — 两处共用，表格用 td.rating-cell .rating-badge，搜索卡用 .sc-header .rating-badge */
+    .rating-badge {
+      padding: 6px 14px; border-radius: 20px; font-size: 0.85rem;
+      font-weight: bold; white-space: nowrap; flex-shrink: 0;
+    }
+    .rating-badge.bilei { background: rgba(184,64,80,0.08);  color: var(--red);    border: 1.5px solid var(--red); }
+    .rating-badge.buqu  { background: rgba(192,120,40,0.08); color: var(--orange); border: 1.5px solid var(--orange); }
+    .rating-badge.keyi  { background: rgba(61,138,92,0.08);  color: var(--green);  border: 1.5px solid var(--green); }
+    .sc-header .rating-badge { padding: 3px 11px; font-size: 0.78rem; }
+    /* meta 一行：图标统一为哑光黛蓝 */
+    .search-meta { font-size: 0.83rem; color: var(--text-dim); display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 8px; }
+    .search-meta span { display: flex; align-items: center; gap: 4px; }
+    .mi { font-style: normal; color: rgba(74,100,132,0.65); font-size: 0.72rem; letter-spacing: 0; }
+    .search-combos { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
+    /* 引言区 — 左侧装饰条 + 长文呼吸感 */
+    .search-notes {
+      font-size: 0.84rem; color: var(--text-dim); line-height: 1.75;
+      background: #F7F4EF; border-radius: 6px; padding: 10px 16px 13px;
+      border-left: 3px solid #B8A890;
+    }
+    /* 具体评价与备注之间的墨线分割 */
+    .notes-divider {
+      height: 1px; margin: 8px 0;
+      background: linear-gradient(90deg, transparent, rgba(184,164,112,0.30), transparent);
+    }
+    /* 【记】标签 */
+    .notes-qita { display: flex; align-items: flex-start; gap: 6px; }
+    .notes-qita-label {
+      flex-shrink: 0; margin-top: 0; /* 顶对齐 */
+      font-size: 0.68rem; color: #A89060;
+      border: 1px solid rgba(168,144,96,0.42); border-radius: 3px;
+      padding: 1px 5px; font-style: normal; letter-spacing: 0.5px;
+    }
+    .no-result { text-align: center; color: var(--text-dim); padding: 40px; font-size: 0.95rem; }
+
+    /* ── Toast & Modal ── */
+    #toast {
+      position: fixed; bottom: 30px; left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #FFFFFF; border: 1px solid var(--border); color: var(--accent);
+      padding: 10px 24px; border-radius: 20px; font-size: 0.9rem; font-weight: bold;
+      opacity: 0; transition: all 0.3s; pointer-events: none; z-index: 9999;
+      box-shadow: 0 4px 20px rgba(60,40,10,0.12);
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(40,30,20,0.48); z-index: 1000; align-items: center; justify-content: center;
+      backdrop-filter: blur(2px);
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: #FDFBF7; border: 1px solid #DDD4C4;
+      border-radius: 12px; padding: 32px 32px 28px;
+      min-width: 300px; max-width: 380px; text-align: center;
+      box-shadow: 0 12px 40px rgba(60,40,10,0.20);
+      position: relative; overflow: hidden;
+    }
+    /* 角落水墨梅花装饰 */
+    .modal::before {
+      content: '❀';
+      position: absolute; bottom: -8px; right: 8px;
+      font-size: 5rem; color: #7A5830; opacity: 0.06;
+      pointer-events: none; user-select: none; line-height: 1;
+    }
+    .modal h3 {
+      color: #8B6D3F; font-size: 1rem; font-weight: bold;
+      letter-spacing: 2px; margin-bottom: 10px;
+    }
+    .modal h3::before, .modal h3::after {
+      content: '——'; font-weight: normal; opacity: 0.35;
+      letter-spacing: 0; margin: 0 6px;
+    }
+    .modal-divider { width: 36px; height: 1px; background: #E2D9CC; margin: 0 auto 18px; }
+    .modal p { color: var(--text-dim); font-size: 0.88rem; margin-bottom: 24px; line-height: 1.75; }
+    .modal-btns { display: flex; gap: 14px; justify-content: center; }
+    .modal-btns button { flex: 1; }
+    /* 取消按钮 — 有实体感的浅灰 */
+    .btn-modal-cancel {
+      background: #EEEAE4; border: 1px solid #DDD4C4; color: #8B8078;
+      border-radius: 8px; padding: 9px 16px; cursor: pointer; font-family: inherit;
+      font-size: 0.9rem; transition: all 0.2s;
+    }
+    .btn-modal-cancel:hover { background: #E4E0D8; border-color: #C8C0B4; color: var(--text); }
+    /* 确认清空 — 哑光黛蓝，暗示"决定性操作" */
+    .btn-modal-confirm {
+      background: linear-gradient(145deg, #6A849C 0%, #5D7599 50%, #4E6484 100%);
+      border: 1px solid rgba(74,90,120,0.4); color: #F0F4F8;
+      border-radius: 8px; padding: 9px 16px; cursor: pointer; font-family: inherit;
+      font-size: 0.9rem; font-weight: bold; transition: all 0.2s;
+      box-shadow: 0 2px 8px rgba(74,90,120,0.22);
+    }
+    .btn-modal-confirm:hover { background: linear-gradient(145deg, #7A94AC 0%, #6D85A9 50%, #5E7494 100%); }
+    /* 确认删除 — 红色，不可撤销 */
+    .btn-modal-danger {
+      background: linear-gradient(145deg, #C84860 0%, #B83250 50%, #A02848 100%);
+      border: 1px solid rgba(160,40,72,0.4); color: #FFF0F2;
+      border-radius: 8px; padding: 9px 16px; cursor: pointer; font-family: inherit;
+      font-size: 0.9rem; font-weight: bold; transition: all 0.2s;
+      box-shadow: 0 2px 8px rgba(160,40,72,0.22);
+    }
+    .btn-modal-danger:hover { background: linear-gradient(145deg, #D45870 0%, #C84264 50%, #B03858 100%); }
+
+    @media (max-width: 768px) {
+      .form-grid { grid-template-columns: 1fr 1fr; }
+      main { padding: 16px; }
+      nav { padding: 0 16px; }
+      header { padding: 12px 16px; }
+    }
+  </style>
+<!-- __BOOTSTRAP_DATA_REMOVED__ -->
+<script>
+/* 旧版备份数据，已由下方 inject.py 块取代，永久禁用 */
+(function(){
+  return; // 禁用
+  var d=[{"id":1773641008526,"tuanpai":"五仙教","tuanzhang":"","qufu":"","pingjia":"避雷","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"","qita":"","date":"2026-03-16"},{"id":1773641008527,"tuanpai":"骚话","tuanzhang":"","qufu":"","pingjia":"避雷","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"","qita":"","date":"2026-03-16"},{"id":1773641008528,"tuanpai":"书函","tuanzhang":"","qufu":"","pingjia":"避雷","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"","qita":"","date":"2026-03-16"},{"id":1773641008529,"tuanpai":"叶冶","tuanzhang":"","qufu":"","pingjia":"避雷","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"","qita":"","date":"2026-03-16"},{"id":1773641008530,"tuanpai":"故人","tuanzhang":"","qufu":"","pingjia":"避雷","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"","qita":"","date":"2026-03-16"},{"id":1773641008531,"tuanpai":"翎歌","tuanzhang":"","qufu":"","pingjia":"不太想再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"","qita":"","date":"2026-03-16"},{"id":1773641008532,"tuanpai":"桑木","tuanzhang":"","qufu":"","pingjia":"不太想再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"躺个普通一直问有无需求，烦人","qita":"","date":"2026-03-16"},{"id":1773641008533,"tuanpai":"问星","tuanzhang":"","qufu":"","pingjia":"不太想再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"牌子凑齐了，团长脾气略差，和团里气纯吵起来了，还说不踢气纯不拍东西，难评","qita":"牌子5 散件2 精简2黄字3 特效武器3","date":"2026-03-16"},{"id":1773641008534,"tuanpai":"零霜","tuanzhang":"","qufu":"","pingjia":"不太想再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"离谱，普通不停翻车，虽然工资高，但是以后还是别打这个团了","qita":"","date":"2026-03-16"},{"id":1773641008535,"tuanpai":"红尘","tuanzhang":"","qufu":"","pingjia":"不太想再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"一般，指挥感觉没睡醒","qita":"","date":"2026-03-16"},{"id":1773641008536,"tuanpai":"晓","tuanzhang":"段雨桐","qufu":"","pingjia":"不太想再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"团长爹味略重","qita":"","date":"2026-03-16"},{"id":1773641008537,"tuanpai":"铁柱","tuanzhang":"","qufu":"","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"怎么会有这么黑的掉落","qita":"","date":"2026-03-16"},{"id":1773641008538,"tuanpai":"老乡鸡","tuanzhang":"","qufu":"","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"老6谜之纠结，不过整体还行，低价捡了个无体精简","qita":"","date":"2026-03-16"},{"id":1773641008539,"tuanpai":"金毛","tuanzhang":"","qufu":"","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"还行，团长口音略重","qita":"","date":"2026-03-16"},{"id":1773641008540,"tuanpai":"烛残","tuanzhang":"","qufu":"","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"妹妹团长，人不错，团略黑","qita":"","date":"2026-03-16"},{"id":1773641008541,"tuanpai":"十屿","tuanzhang":"","qufu":"","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"还行，拍到了定风珠","qita":"","date":"2026-03-16"},{"id":1773641008542,"tuanpai":"放假","tuanzhang":"","qufu":"","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"团长东北大哥，脾气挺好，出了特殊马","qita":"英雄太极宫牌子51111精简2黄3","date":"2026-03-16"},{"id":1773641008543,"tuanpai":"朝呢","tuanzhang":"","qufu":"","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"妹妹团长，人蛮好的，就是团挺黑","qita":"","date":"2026-03-16"},{"id":1773641008544,"tuanpai":"呱喵","tuanzhang":"","qufu":"","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"团长声音受受的，人不错，团挺黑","qita":"散件2K，牌子5K，武器5，精简2特效腰坠2Z，黄字特效武器3Z","date":"2026-03-16"},{"id":1773641008545,"tuanpai":"千雪","tuanzhang":"","qufu":"","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"还行，团长有点口音","qita":"","date":"2026-03-16"},{"id":1773641008546,"tuanpai":"枫叶泊","tuanzhang":"","qufu":"","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"挺不错","qita":"","date":"2026-03-16"},{"id":1773641008549,"tuanpai":"小卑微","tuanzhang":"","qufu":"","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"高铁拉煤，又快又黑","qita":"","date":"2026-03-16"},{"id":1773641008550,"tuanpai":"立青","tuanzhang":"","qufu":"","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"还不错，速度很快","qita":"","date":"2026-03-16"},{"id":1773641008551,"tuanpai":"柴堆","tuanzhang":"","qufu":"双梦","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"英雄教学团，打完了1-4，还不错!","qita":"","date":"2026-03-16"},{"id":1773641008552,"tuanpai":"沪上爷叔","tuanzhang":"齐司狐","qufu":"飞龙在天","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"又是高铁拉煤，不过团长人不错","qita":"","date":"2026-03-16"},{"id":1773641008553,"tuanpai":"十月","tuanzhang":"月无殇","qufu":"天鹅坪","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"英雄老5教学，团长人不错","qita":"","date":"2026-03-16"},{"id":1773641008554,"tuanpai":"敛秋","tuanzhang":"守城士兵","qufu":"双梦","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"英雄老5 p2教学，团长人不错","qita":"","date":"2026-03-16"},{"id":1773641008555,"tuanpai":"棠梨","tuanzhang":"舞扇","qufu":"破阵子","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"打完了英雄老5，妹子团长，人超好","qita":"","date":"2026-03-16"},{"id":1773641008556,"tuanpai":"东","tuanzhang":"隔壁老王媳妇","qufu":"绝代","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"普通弓月城","xinfa":""}],"beizhu":"大附魔略黑","qita":"","date":"2026-03-16"},{"id":1773641008557,"tuanpai":"又又","tuanzhang":"甜小又","qufu":"唯满侠","pingjia":"不太想再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"英雄15速，前三补，妹子团长，指挥略乱，有点压力怪","qita":"牌子51111，散件2精简3普通武器1水特效4，TN武器半价，消补10z补10%，30z补20%，老板和大铁无消补。扫地不包精简牌子，qq群1037194174可以进群保点卡，YY1461726269","date":"2026-03-16"},{"id":1773641008558,"tuanpai":"旧","tuanzhang":"老旧","qufu":"眉间雪","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"英雄提升不带老板，搞笑团长，不过很纠结，脾气还不错，出了水特效盒子但是没拍过可恶","qita":"来YY保点卡72516056","date":"2026-03-16"},{"id":1773641008559,"tuanpai":"快乐车车","tuanzhang":"冻顶乌龙冰冰","qufu":"眉间雪","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"普通弓月城","xinfa":""}],"beizhu":"一般，妹子无界团长，略话痨","qita":"","date":"2026-03-16"},{"id":1773641008560,"tuanpai":"相思","tuanzhang":"方糖糖糖","qufu":"天鹅坪","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"无方英雄弓月城，还行，虽然翻车了几波，但是低价捡到了一个白字破招精简","qita":"组人慢保点卡：756772531；装备：2 55511 黄字腰坠水特效3z（TN半价） 白字2z；补贴：桌鱼1.5k D补3k飞刀补1k 消费10%甲人原价补；yy：1450647981","date":"2026-03-16"},{"id":1773641008561,"tuanpai":"晚来秋","tuanzhang":"一二三四五","qufu":"华乾","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"普通弓月城","xinfa":""}],"beizhu":"还不错，出了加速裤子和特效腰坠，都捡到了","qita":"","date":"2026-03-16"},{"id":1773641008562,"tuanpai":"偷偷","tuanzhang":"沈诗砚","qufu":"华乾","pingjia":"不太想再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"万灵普通弓月城，妹子团长，人不错，但是开怪和拍卖都太快了","qita":"","date":"2026-03-16"},{"id":1773641008563,"tuanpai":"求其","tuanzhang":"青九缘","qufu":"绝代","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"毒经英雄弓月城复习团，还行，虽然翻车了，好歹在跨年前打完了","qita":"","date":"2026-03-16"},{"id":1773641008564,"tuanpai":"什么","tuanzhang":"鸪咕咕","qufu":"破阵子","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"毒经普通弓月城，新年第一车，还行，妹子团长，话略多","qita":"","date":"2026-03-16"},{"id":1773641008565,"tuanpai":"度几","tuanzhang":"","qufu":"","pingjia":"避雷","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"柴堆群友避雷","qita":"","date":"2026-03-16"},{"id":1773641008566,"tuanpai":"簌","tuanzhang":"哟吼吼","qufu":"华乾","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"段氏普通弓月城，妹子团长，人很好，低价捡了不少东西","qita":"","date":"2026-03-16"},{"id":1773641008567,"tuanpai":"金鱼","tuanzhang":"腴鱼","qufu":"双梦","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"衍天普通弓月城，100起拍，也是出了不少东西","qita":"","date":"2026-03-16"},{"id":1773641008568,"tuanpai":"胖胖","tuanzhang":"阿波罗一号","qufu":"双梦","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"冰心英雄弓月城，还行吧，老五翻车一次，加速黄字手又没撕过，可恶","qita":"散件1牌子55111精简2水特效3 TN半价 过10补10 过20补20","date":"2026-03-16"},{"id":1773641008569,"tuanpai":"巴奴毛肚","tuanzhang":"焰濯","qufu":"华乾","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"冰心普通弓月城，还不错，团长声音蛮好听","qita":"","date":"2026-03-16"},{"id":1773641008570,"tuanpai":"明羽","tuanzhang":"嘲讽你过来吖","qufu":"眉间雪","pingjia":"不太想再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"万灵普通弓月城，又是不倒数的团长！","qita":"","date":"2026-03-16"},{"id":1773641008571,"tuanpai":"故云","tuanzhang":"小温身体健康","qufu":"双梦","pingjia":"不太想再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"毒经英雄弓月城，略混乱，老五标点也不太习惯，不过10z多捡到了特效腰坠嘿嘿","qita":"","date":"2026-03-16"},{"id":1773641008572,"tuanpai":"哇","tuanzhang":"从小就调皮","qufu":"天鹅坪","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"毒经普通弓月城，闪了！！第一次闪！！好激动！！！团长人也不错，似乎是东北人","qita":"1031102539.0","date":"2026-03-16"},{"id":1773641008573,"tuanpai":"旺旺仙贝","tuanzhang":"小黑脸","qufu":"龙虎","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"段氏普通弓月城，还不错，打得很快","qita":"","date":"2026-03-16"},{"id":1773641008574,"tuanpai":"悟道","tuanzhang":"明月霸霸@隐归","qufu":"蝶恋花","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"衍天普通弓月城，还行吧，老五虽然翻车了几次，但是低价捡到好多东西","qita":"","date":"2026-03-16"},{"id":1773641008575,"tuanpai":"丐丐","tuanzhang":"抱团抱紧","qufu":"双梦","pingjia":"避雷","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"药宗英雄弓月城，打得又乱，掉落又黑","qita":"cw补2老三前三补2叠加 刀补1；散件2k 牌子35551  特效精简2（TN5k）黄字3（破招2）；扫地不包牌子武器精简   鱼1k 桌子+同泽5k； 罚款351飞（1-4累计）；老五 团灭p1 3k p2 5k p3 1z   ；死亡p1 1k  p2 2k p3 3k；打扇子1亿罚1z  一亿以上每千万罚1.5k；全程视频录制及战斗事件记录（JCL）","date":"2026-03-16"},{"id":1773641008576,"tuanpai":"时光","tuanzhang":"七七呦","qufu":"双梦","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"药宗普通弓月城，还不错，打得很快","qita":"","date":"2026-03-16"},{"id":1773641008577,"tuanpai":"明悟","tuanzhang":"倚杖度众生","qufu":"飞龙在天","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"药宗英雄弓月城，还不错，虽然翻车了好久，但是团长人不错，还12z捡到了黄字裤子","qita":"1020285480.0","date":"2026-03-16"},{"id":1773641008578,"tuanpai":"欢","tuanzhang":"阴阳两句","qufu":"破阵子","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"药宗普通弓月城，又快又黑","qita":"群号：981835672，小5大拍，老板随缘暂3，无阴兵","date":"2026-03-16"},{"id":1773641008579,"tuanpai":"嘻嘻","tuanzhang":"临江雪","qufu":"双梦","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"段氏普通弓月城，还不错","qita":"","date":"2026-03-16"},{"id":1773641008580,"tuanpai":"21.0","tuanzhang":"一墨语沉香一","qufu":"唯满侠","pingjia":"不太想再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"衍天普通弓月城，团长人不错，但是麦太吵了","qita":"","date":"2026-03-16"},{"id":1773641008581,"tuanpai":"贼红","tuanzhang":"砚秋哥哥","qufu":"华乾","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"毒经英雄弓月城，还行吧，略牢，但是真的黑啊，而且有低于百分之5承伤吸血费","qita":"散件2 牌子55551 精简2 黄字3 T奶武器、水特效半价","date":"2026-03-16"},{"id":1773641008582,"tuanpai":"枫林晚","tuanzhang":"悍娇虎","qufu":"华乾","pingjia":"不太想再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"毒经普通弓月城，妹子团长，人不错，不过不太喜欢团长的声音，台湾腔太重","qita":"","date":"2026-03-16"},{"id":1773641008583,"tuanpai":"棉花糖","tuanzhang":"明教大姐大","qufu":"天鹅坪","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"冰心英雄弓月城，还不错，打的很快，不过啥也没出，群191792570","qita":"散件2K  牌子55511  武器1Z  精简2Z 黄字特效3Z   T奶半价，材料包括所有材料散件（不包括牌子，特殊），自备紫色小药磨石   ，前三2刀补1，罚款3K起","date":"2026-03-16"},{"id":1773641008584,"tuanpai":"克洛格","tuanzhang":"光头智障","qufu":"双梦","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"冰心普通弓月城，妹子团长，还不错，打得很快","qita":"","date":"2026-03-16"},{"id":1773641008585,"tuanpai":"Ta","tuanzhang":"循循善盾","qufu":"绝代","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"衍天英雄弓月城，妹子团长，很不错，打得很快","qita":"320921741.0","date":"2026-03-16"},{"id":1773641008586,"tuanpai":"卡布达","tuanzhang":"思君如故","qufu":"龙虎","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"万灵普通弓月城，不错，打得很快","qita":"","date":"2026-03-16"},{"id":1773641008587,"tuanpai":"红的很","tuanzhang":"一斧头一","qufu":"煎蛋","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"万灵英雄弓月城，打得很快，还出了云海，可恶，又是外功出内功，不过没人出警我嘿嘿，确实很红，2z多工资","qita":"D补看老三 ，前三补3，刀补1，散件2q  牌子35555  精简1z  2z  ，10z以上消补10%，材料本职业武器牌子精简不插","date":"2026-03-16"},{"id":1773641008588,"tuanpai":"星居阁","tuanzhang":"眠大星","qufu":"华乾","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"无方英雄弓月城，还行，掉落略黑","qita":"","date":"2026-03-16"},{"id":1773641008589,"tuanpai":"红的很","tuanzhang":"木鱼敲啊敲","qufu":"蝶恋花","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"无方普通弓月城，不错，打得很快，3000捡到了水特效嘿嘿","qita":"","date":"2026-03-16"},{"id":1773641008590,"tuanpai":"红果","tuanzhang":"布响丸喇","qufu":"破阵子","pingjia":"避雷","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"毒经英雄弓月城，组人也慢，团长感觉也不太会，打得又乱，掉落又黑","qita":"","date":"2026-03-16"},{"id":1773641008591,"tuanpai":"相声","tuanzhang":"下雨天了@青梅煮酒","qufu":"天鹅坪","pingjia":"不太想再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"毒经普通弓月城，团长那个麦像隔着十万八千里，像是亲友团，还有tn补","qita":"","date":"2026-03-16"},{"id":1773641008592,"tuanpai":"雪意","tuanzhang":"君知道晓","qufu":"龙虎","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"冰心英雄弓月城，好红，出了武器盒子和精简戒指，都拍到了嘿嘿，团长人也不错，虽然感觉声音离很远","qita":"585919088，消补十万％5超二十万％10","date":"2026-03-16"},{"id":1773641008593,"tuanpai":"好事","tuanzhang":"滂臭狗爪","qufu":"双梦","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"冰心普通弓月城，妹子团长，还行，真黑啊，工资2k","qita":"","date":"2026-03-16"},{"id":1773641008594,"tuanpai":"不系舟","tuanzhang":"城絮","qufu":"华乾","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"衍天英雄弓月城，妹子团长，指挥很清晰，不过有点害怕，感觉很看重承伤","qita":"群：779308631，人满喊，·TN增益80+，断层2BOSS一半工资，断层3BOSS转老板，·图南子承伤末三D去补“溜5刀”，不会投1K给会的·拉脱个人原因死351飞，老五内场后51飞，过了不罚，·内场Q4出晚猜错猛打队友的一起罚，·提前开怪250金一次，散件2K，普通盒5K，牌35511，精简2Z，黄字特效武腰坠衍天特殊3Z（TN 半价），散全包老三前结算","date":"2026-03-16"},{"id":1773641008595,"tuanpai":"瑝珑","tuanzhang":"恋爱脑小铲","qufu":"破阵子","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"衍天普通弓月城，还行","qita":"","date":"2026-03-16"},{"id":1773641008596,"tuanpai":"宿命","tuanzhang":"一苍戍一","qufu":"幽月轮","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"万灵英雄弓月城，好红，没见过这么红外功的车","qita":"老三前3补3 /14犯错个人2k 5-235消10补10%  20补20% 玄晶300起补10% 散2 牌55511 精2，群1077954242","date":"2026-03-16"},{"id":1773641008597,"tuanpai":"星","tuanzhang":"秀秀仙子","qufu":"煎蛋","pingjia":"不太想再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"万灵普通弓月城，又不倒数","qita":"","date":"2026-03-16"},{"id":1773641008598,"tuanpai":"福报","tuanzhang":"剑纯重制版","qufu":"双梦","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"段氏普通弓月城，还不错","qita":"","date":"2026-03-16"},{"id":1773641008599,"tuanpai":"豆蔻","tuanzhang":"青鸟灵","qufu":"双梦","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"段氏英雄弓月城，还行吧","qita":"消补20z以上10% 不包括玄晶，刀闪了补5k（没有从老三承伤最低开始算不会1k），137330373","date":"2026-03-16"},{"id":1773641008600,"tuanpai":"宿命","tuanzhang":"一苍戊一","qufu":"煎蛋","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"无方英雄弓月城，真的蛮红，又出了外功双会手，5z3捡到了特效腰坠嘿嘿","qita":"老三前3补3 /14犯错个人2k 5-235，消10补10%  20补20% ，玄晶300起，散2 牌5 精2 衍天道具5","date":"2026-03-16"},{"id":1773641008601,"tuanpai":"老八校","tuanzhang":"广东人","qufu":"幽月轮","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"无方普通弓月城，还行，真黑啊，工资2k1","qita":"","date":"2026-03-16"},{"id":1773641008602,"tuanpai":"师太团","tuanzhang":"镇狱明王","qufu":"龙虎","pingjia":"不太想再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"毒经英雄弓月城，妹子团长，感觉一般，应该是亲友团，还蛐蛐退组的奶药，也略黑","qita":"散件2K牌子5K精简2W黄字特效3W，罚款351，老五p3灭团翻倍，老三如果输出不够被卡boss，会优化最下面两个，D补看老3承伤，消补10z以上10%，40z以上补20%，老板和装绑材料不算，老五300w及格线","date":"2026-03-16"},{"id":1773641008604,"tuanpai":"哇","tuanzhang":"筱筱丽","qufu":"天鹅坪","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"毒经普通弓月城，团长似乎是东北人，挺逗","qita":"","date":"2026-03-16"},{"id":1773641008605,"tuanpai":"宿命","tuanzhang":"一秃戊一","qufu":"姨妈","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"冰心英雄弓月城，节奏真不错，挂件居然拍了10z，奇怪的工资增加了","qita":"老三前3补3 /14犯错个人2k 5-235，消10补10%  20补20% ，玄晶300起  散2 牌5 精2 衍天5Z，散件不包：精简 特效 本职业牌子","date":"2026-03-16"},{"id":1773641008607,"tuanpai":"念","tuanzhang":"又闻一人念","qufu":"煎蛋","pingjia":"不太想再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"衍天英雄弓月城，略难评，不太会指挥，还喜欢搞人心态","qita":"","date":"2026-03-16"},{"id":1773641008608,"tuanpai":"哇","tuanzhang":"筱筱笑笑","qufu":"天鹅坪","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"衍天普通弓月城，团长人真不错","qita":"","date":"2026-03-16"},{"id":1773641008609,"tuanpai":"宿命","tuanzhang":"一苍戌一","qufu":"绝代","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"段氏英雄弓月城，针不戳，不过好像开始黑黑的了","qita":"老三前3补3 /14犯错个人2k 5-235，消10补10%  20补20% ，玄晶300起  散2 牌5 精2 衍天5Z，散件不包：精简 特效 本职业牌子","date":"2026-03-16"},{"id":1773641008610,"tuanpai":"盆栽","tuanzhang":"我不是小心眼","qufu":"华乾","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"段氏普通弓月城，妹子团长，还行，不过有点喷麦","qita":"","date":"2026-03-16"},{"id":1773641008611,"tuanpai":"正经","tuanzhang":"似雪的朝圣言","qufu":"华乾","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"花间英雄弓月城，团长脾气不错，但是玩T有时忘记接仇","qita":"20Z以上补百分之10  补贴（桌 消 刀），T奶满层补2k","date":"2026-03-16"},{"id":1773641008612,"tuanpai":"鸿泽","tuanzhang":"祝你玩得开心","qufu":"天鹅坪","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"万灵英雄弓月城，还行，出了外功双会，不过团长麦略吵","qita":"qq群913401699，大（300起）衍天特殊3Z，老三前三补3，老四溜刀补1，散件1.牌子35551，精简2，黄字和特效3腰椎2Z，打工消补：10砖10%，20砖20%，看下扫地。猫眼石老二开打之前结算。包所有烂掉得一切不包括玄晶沙子任务道具","date":"2026-03-16"},{"id":1773641008613,"tuanpai":"小天才","tuanzhang":"楚稼君","qufu":"华乾","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"万灵普通弓月城，不错，妹子团长，声音很好听","qita":"","date":"2026-03-16"},{"id":1773641008614,"tuanpai":"奥斯卡","tuanzhang":"上官修罗","qufu":"蝶恋花","pingjia":"不太想再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"无相楼英雄弓月城，翻车了非常波又黑，团长脾气很好不怎么罚款，但是指挥有时候慢半拍","qita":"","date":"2026-03-16"},{"id":1773641008615,"tuanpai":"苏菲教团","tuanzhang":"回纥公主","qufu":"幽月轮","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"冰心教学挑战，没过但是团长比较有耐心","qita":"","date":"2026-03-16"},{"id":1773641008616,"tuanpai":"宿命","tuanzhang":"一苍戊一","qufu":"煎蛋","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"无方英雄弓月城，老五翻车了一波，不过整体还是不错","qita":"消10补10%  20补20%，玄晶300起  散2 牌5 精2 衍天3Z，散件不包：精简 特效 本职业牌子","date":"2026-03-16"},{"id":1773641008617,"tuanpai":"冬日","tuanzhang":"响圆","qufu":"唯满侠","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"无方普通弓月城，妹子团长，声音好听，打得很快","qita":"","date":"2026-03-16"},{"id":1773641008618,"tuanpai":"宿命","tuanzhang":"一秃戊一","qufu":"蝶恋花","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"毒经英雄弓月城，很顺，但是好像变黑了——","qita":"消10补10%  20补20%，玄晶300起补5% 散2 牌5 精2 衍天3Z，散件不包：精简 特效 本职业牌子","date":"2026-03-16"},{"id":1773641008619,"tuanpai":"蚂蚁","tuanzhang":"白芷沅","qufu":"幽月轮","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"毒经普通弓月城，还行，有些队友略抽象","qita":"散件1牌子1武器2精简特效3，1041211559","date":"2026-03-16"},{"id":1773641008620,"tuanpai":"老年社团","tuanzhang":"顾厌罹","qufu":"华乾","pingjia":"不太想再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"冰心英雄弓月城，略曲折，老一翻车一波，老五翻车两波，整体还行，不过精简是5k5k的加价，物价略贵（虽然没拍起来）","qita":"全拍都在, dps前三补2q，Q群：626323382","date":"2026-03-16"},{"id":1773641008621,"tuanpai":"姐姐","tuanzhang":"你的小脑斧呀","qufu":"蝶恋花","pingjia":"不太想再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"冰心普通弓月城，妹子团长，略墨迹，而且怎么普通老五还能翻车——","qita":"","date":"2026-03-16"},{"id":1773641008622,"tuanpai":"花胡","tuanzhang":"来根油条","qufu":"梦江南","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"花间英雄弓月城，团长脾气和水平不错，但是翻车太多一直说打完再罚款和团里明教t吵起来了（个人觉得团长问题相对比较小）","qita":"散2K牌5K精简2Z黄字3Z（单破招加速2z），老三承伤垫底默认溜刀（不会投500），消补10Z补10%","date":"2026-03-16"},{"id":1773641008623,"tuanpai":"羽鹞","tuanzhang":"","qufu":"飞龙","pingjia":"避雷","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"小红书刷到的","qita":"在剑3，花1Z还真把自己当老板了？！ 避雷团牌：【羽鹞... http://xhslink.com/o/9rpGTOL7mV9 复制后打开【小红书】查看笔记！","date":"2026-03-16"},{"id":1773641008624,"tuanpai":"宿命","tuanzhang":"酱油晓策","qufu":"唯满侠","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"衍天英雄弓月城，7z8拍到了水特效盒子，快落","qita":"消10补10%  20补20% ，玄晶300起补5%  ，散2K 牌5K 精2Z 衍天3Z，散件不包：精简 特效 本职业牌子","date":"2026-03-16"},{"id":1773641008625,"tuanpai":"宿命","tuanzhang":"酱油晓策","qufu":"幽月轮","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"段氏英雄弓月城，又出了水特效盒子，9z1拍到了，555略贵，而且还出了衍天特效（为啥上车不出——）","qita":"","date":"2026-03-16"},{"id":1773641008626,"tuanpai":"福宝","tuanzhang":"福跑跑","qufu":"幽月轮","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"段氏普通弓月城，团长真的很话痨，好像是福建口音","qita":"群号421314831","date":"2026-03-16"},{"id":1773641008627,"tuanpai":"观云","tuanzhang":"酒酿圆子","qufu":"唯满侠","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"衍天普通弓月城，妹子团长，声音好听，还行","qita":"","date":"2026-03-16"},{"id":1773641008628,"tuanpai":"苓","tuanzhang":"萝莉好看十","qufu":"眉间雪","pingjia":"不太想再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"冰心英雄弓月城，团长打法非常小众，后面翻车了三个小时发生了很多事，总体来说可以谨慎","qita":"散件2k牌子55551普通武器1【TN 半价】精简2水特3黄字4，全员【老板低消外】消费20z补10%，40z补20% 预3躺，老三boss承伤前三补3，有大阵不被断层就好断层2q，刀补1","date":"2026-03-16"},{"id":1773641008629,"tuanpai":"陆勤奋","tuanzhang":"陆勤奋","qufu":"绝代","pingjia":"不太想再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"万灵英雄弓月城，老三翻一波，老四翻两波，而且有万灵还5秒倒数，难评","qita":"小5大400，演罚351离，老5长痛51离，飞刀老3承伤低的去不去投1000，打工消费10Z以上10%补贴，扫地除了沙子大铁其他烂掉全给","date":"2026-03-16"},{"id":1773641008630,"tuanpai":"金灿灿","tuanzhang":"顾玄君","qufu":"眉间雪","pingjia":"避雷","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"万灵普通弓月城，指挥得乱七八糟，一开始还是开的黑工，换个号又换的一个石头都没插的号","qita":"","date":"2026-03-16"},{"id":1773641008631,"tuanpai":"捧哽","tuanzhang":"水岸浪卷","qufu":"唯我独尊","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"无相楼英雄弓月城，没翻车，团长指挥也没问题","qita":"牌子33355、散1、精简1z，黄特2z","date":"2026-03-16"},{"id":1773641008632,"tuanpai":"宿命","tuanzhang":"一苍戊一","qufu":"煎蛋","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"无方英雄弓月城，黑黑的很安心（为啥又出衍天特效——又出在了没开的号上——）","qita":"","date":"2026-03-16"},{"id":1773641008633,"tuanpai":"宿命","tuanzhang":"一苍戍一","qufu":"煎蛋","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"衍天英雄弓月城，2z捡到了特效腰坠嘿嘿","qita":"","date":"2026-03-16"},{"id":1773641008634,"tuanpai":"发誓","tuanzhang":"妖娆继母","qufu":"梦江南","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"花间普通弓月城，平平无奇的一车","qita":"","date":"2026-03-16"},{"id":1773641008635,"tuanpai":"九玖","tuanzhang":"陆伊笙","qufu":"山海相逢","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"毒经普通弓月城，团长说话像幼教，但是有口音，另外开怪倒数三秒","qita":"","date":"2026-03-16"},{"id":1773641008636,"tuanpai":"宿命","tuanzhang":"一苍戍一","qufu":"绝代","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"毒经英雄弓月城，黑出新高度，工资1k7","qita":"","date":"2026-03-16"},{"id":1773641008637,"tuanpai":"宿命","tuanzhang":"一苍戌一","qufu":"绝代","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"冰心英雄弓月城，还行，好歹没上车黑","qita":"","date":"2026-03-16"},{"id":1773641008638,"tuanpai":"千岛湖","tuanzhang":"渺渺云深","qufu":"梦江南","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"花间英雄弓月城，没怎么翻车，但是组人的时候疑似开了小号凑人头","qita":"群1009378890","date":"2026-03-16"},{"id":1773641008639,"tuanpai":"HD","tuanzhang":"砍泥没@隐士","qufu":"煎蛋","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"无方普通弓月城，还行，打得挺快，不过不倒数","qita":"","date":"2026-03-16"},{"id":1773641008640,"tuanpai":"山風","tuanzhang":"我的爱妻","qufu":"天鹅坪","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"无相楼普通弓月城，还行就是有点黑","qita":"","date":"2026-03-16"},{"id":1773641008641,"tuanpai":"下雪了","tuanzhang":"团长他演我","qufu":"绝代","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"无相楼英雄弓月城，总体来说比较顺利，除了团长自己开特效害灭团以外","qita":"","date":"2026-03-16"},{"id":1773641008642,"tuanpai":"醉梦楼","tuanzhang":"南宫不二","qufu":"幽月轮","pingjia":"避雷","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"段氏英雄弓月城，老一翻一波，老五翻六波，我真无语了，团长感觉指挥慢半拍，假身也靠团员喊","qita":"散2牌35555武器精简1特效黄字2；衍天特效4，大150起","date":"2026-03-16"},{"id":1773641008643,"tuanpai":"娱乐","tuanzhang":"戒妄","qufu":"华乾","pingjia":"避雷","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"万灵英雄弓月城，团长全程在yy和亲友聊天，假身没验出来在团麦和别人吵架","qita":"","date":"2026-03-16"},{"id":1773641008644,"tuanpai":"欸鸭","tuanzhang":"弓千月","qufu":"长安城","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"毒经英雄弓月城，还行除了团长犯错害团灭一波，还有两拨翻车是团员的问题","qita":"","date":"2026-03-16"},{"id":1773641008645,"tuanpai":"宿命","tuanzhang":"一苍戊一","qufu":"姨妈","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"无方英雄弓月城，出了会无黄字裤子","qita":"","date":"2026-03-16"},{"id":1773641008646,"tuanpai":"金库","tuanzhang":"希达罗摩","qufu":"山海相逢","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"无方普通弓月城，还行还行","qita":"","date":"2026-03-16"},{"id":1773641008648,"tuanpai":"二毛","tuanzhang":"喵二毛","qufu":"双梦","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"衍天普通弓月城，不错，很快","qita":"","date":"2026-03-16"},{"id":1773641008649,"tuanpai":"就喝奶茶","tuanzhang":"蘑菇","qufu":"唯我独尊","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"花间英雄弓月城，除了团长失误翻车一波没太大问题","qita":"带好小吃小药 不喜欢罚款 但别过分 多次问题优化 老三承伤及格线4.8  老五及格线3.8 不够3k （累计）","date":"2026-03-16"},{"id":1773641008650,"tuanpai":"宿命","tuanzhang":"一苍戌一","qufu":"姨妈","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"毒经英雄弓月城，还行，出了武器盒子，没拍到，可恶","qita":"","date":"2026-03-16"},{"id":1773641008651,"tuanpai":"言画","tuanzhang":"风雪原","qufu":"山海相逢","pingjia":"避雷","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"毒经普通弓月城，小铁漏插一个，老板交易不了，居然团补1k","qita":"","date":"2026-03-16"},{"id":1773641008652,"tuanpai":"就喝奶茶","tuanzhang":"陆萌","qufu":"天鹅坪","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"冰心英雄弓月城，小翻几波，就是有点黑加穷","qita":"带好小吃小药 不喜欢罚款 但别过分 多次问题优化 老三承伤及格线4.8  老五及格线3.8 不够3k （累计）","date":"2026-03-16"},{"id":1773641008653,"tuanpai":"宿命","tuanzhang":"一苍戊一","qufu":"幽月轮","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"段氏英雄弓月城，真黑啊，T奶大礼包","qita":"","date":"2026-03-16"},{"id":1773641008654,"tuanpai":"宿命","tuanzhang":"一苍戌一","qufu":"幽月轮","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"冰心英雄弓月城，黢黑，不过比上车好点","qita":"","date":"2026-03-16"},{"id":1773641008655,"tuanpai":"宿命","tuanzhang":"一苍戊一","qufu":"唯满侠","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"衍天英雄弓月城，还行，拍到了精简裤子","qita":"","date":"2026-03-16"},{"id":1773641008656,"tuanpai":"就喝奶茶","tuanzhang":"邪恶大魔王","qufu":"天鹅坪","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"无相楼英雄弓月城，老五翻车了很多波。有一波承伤是原定为1号点位置的人一开始站到3号点来了，然后2号点的人想去1号点帮他补。这个时候原定1号点位置的人又回头去1号点承伤，结果因为重叠团灭了。后来团长说要罚原定1号点承伤的人，因为2号点过去的人是帮他补。","qita":"","date":"2026-03-16"},{"id":1773641008657,"tuanpai":"宿命","tuanzhang":"一苍戌一","qufu":"唯满侠","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"万灵英雄弓月城，老三和老五都翻车了，不过团长情绪很稳定，黑黑的很安心","qita":"","date":"2026-03-16"},{"id":1773641008658,"tuanpai":"好耶","tuanzhang":"早安星","qufu":"唯满侠","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"万灵普通弓月城，还行","qita":"","date":"2026-03-16"},{"id":1773641008659,"tuanpai":"毛茸茸","tuanzhang":"狗狗睡睡","qufu":"双梦","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"冰心普通弓月城，还行还行","qita":"","date":"2026-03-16"},{"id":1773641008660,"tuanpai":"就喝奶茶","tuanzhang":"小猫提灯","qufu":"唯满侠","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"毒经英雄弓月城，全程没有翻车就是团长没有及时查承伤","qita":"","date":"2026-03-16"},{"id":1773641008661,"tuanpai":"宿命","tuanzhang":"傲罗米亚@唯我独尊","qufu":"唯满侠","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"无方英雄弓月城，有演员——，不过3z6捡到了武器盒子嘿嘿（不过有个田螺自己一直死还出警别人好烦人）","qita":"","date":"2026-03-16"},{"id":1773641008662,"tuanpai":"宿命","tuanzhang":"一秃戍一","qufu":"煎蛋","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"毒经英雄弓月城，高铁拉煤","qita":"","date":"2026-03-16"},{"id":1773641008663,"tuanpai":"宿命","tuanzhang":"一苍戊一","qufu":"龙虎","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"衍天英雄弓月城，可恶，破无黄字腰带撕到了10z","qita":"","date":"2026-03-16"},{"id":1773641008664,"tuanpai":"欸鸭","tuanzhang":"弓千月","qufu":"长安城","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"无相楼英雄弓月城，全程没翻车，团长指挥没啥问题","qita":"","date":"2026-03-16"},{"id":1773641008665,"tuanpai":"温文尔雅","tuanzhang":"爱萝莉真好一","qufu":"唯满侠","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"奶歌躺英雄弓月城，还行，打得挺快，出了奶妈特效腰坠，不知道是红还是黑hhhhh","qita":"罚款1分钟1k 单人按次数翻倍  ，装备价格 牌子 5k 散件2k 普武1z 精简1z 黄字道具2z T奶武器半价，消补10z 10% 20z 20% 玄晶5%，飞刀高达补1","date":"2026-03-16"},{"id":1773641008666,"tuanpai":"不压力","tuanzhang":"追光小娜","qufu":"双梦","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"段氏普通弓月城，全是疗愈，工资854我服了","qita":"","date":"2026-03-16"},{"id":1773641008667,"tuanpai":"不压力","tuanzhang":"烛颜","qufu":"姨妈","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"奶药普通弓月城，四奶提心吊胆奶完，还好没翻车","qita":"","date":"2026-03-16"},{"id":1773641008668,"tuanpai":"不压力","tuanzhang":"云筝筝","qufu":"双梦","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"奶毒普通弓月城，又是四奶，奶得低低的5555","qita":"","date":"2026-03-16"},{"id":1773641008669,"tuanpai":"剑镇","tuanzhang":"正德","qufu":"唯满侠","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"万灵普通弓月城，很迅速","qita":"","date":"2026-03-16"},{"id":1773641008670,"tuanpai":"宿命","tuanzhang":"一苍戊一","qufu":"姨妈","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"段氏英雄弓月城，拍到了特效腰坠嘿嘿","qita":"","date":"2026-03-16"},{"id":1773641008671,"tuanpai":"冬宫","tuanzhang":"悦色@梦江南","qufu":"乾坤一掷","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"花间英雄弓月城，团长如果单凭指挥的话没什么毛病，翻车了几波","qita":"","date":"2026-03-16"},{"id":1773641008672,"tuanpai":"急","tuanzhang":"归山河","qufu":"绝代","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"冰心英雄弓月城，还行，组人组了一个世纪，不过挺红，出了九重霄汉，没拍到可恶","qita":"","date":"2026-03-16"},{"id":1773641008673,"tuanpai":"兹白","tuanzhang":"军门七七","qufu":"山海相逢","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"奶秀普通弓月城，好多疗","qita":"","date":"2026-03-16"},{"id":1773641008674,"tuanpai":"九月","tuanzhang":"若离愁","qufu":"绝代","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"奶歌普通弓月城，挺快的","qita":"","date":"2026-03-16"},{"id":1773641008675,"tuanpai":"花月","tuanzhang":"刀盾闯天涯","qufu":"唯满侠","pingjia":"避雷","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"万灵英雄弓月城，难评，不会玩奶花还一直出警奶花，说什么落黑子减团队dps，嘴也不干净，一直说脏话","qita":"","date":"2026-03-16"},{"id":1773641008676,"tuanpai":"销冠","tuanzhang":"劳工","qufu":"唯满侠","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"无方英雄弓月城，老四翻车一波，老五翻车三波，累了，不过团长指挥没啥问题","qita":"","date":"2026-03-16"},{"id":1773641008677,"tuanpai":"麦兜","tuanzhang":"三月兔兔","qufu":"长安城","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"冰心英雄弓月城，团长指挥安排的很快，没有翻车","qita":"","date":"2026-03-16"},{"id":1773641008678,"tuanpai":"紫剑","tuanzhang":"高声暗皱眉","qufu":"乾坤一掷","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"无相楼英雄弓月城，团长话很少，太简单了没有翻车","qita":"","date":"2026-03-16"},{"id":1773641008679,"tuanpai":"香猪","tuanzhang":"安莫莫","qufu":"乾坤一掷","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"毒经英雄弓月城，总体不错，团长老四说闪了给T和其他溜刀的补5000","qita":"群号：1063758667","date":"2026-03-16"},{"id":1773641008680,"tuanpai":"暖暖","tuanzhang":"菟兔堍","qufu":"长安城","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"冰心英雄弓月城，还行，出了个外功会心黄字裤子","qita":"","date":"2026-03-16"},{"id":1773641008681,"tuanpai":"小乖","tuanzhang":"墨倾颜","qufu":"龙虎","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"毒经英雄弓月城，出了九重霄汉，拍了25z，可恶，好贵","qita":"散件2   牌子35555 精简1/2   特效武器3，罚款3/5/1，无消补，衍天特效3Z起，挂Q群：953370174","date":"2026-03-16"},{"id":1773641008682,"tuanpai":"珞珈","tuanzhang":"","qufu":"","pingjia":"避雷","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"小红书刷到的避雷","qita":"","date":"2026-03-16"},{"id":1773641008683,"tuanpai":"瑶台","tuanzhang":"漂亮军爷","qufu":"天鹅坪","pingjia":"不太想再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"无方英雄弓月城，略墨迹，团长进本才开始拖宏，看不懂，打得也纠结，有TN补1k的情况下TN还一直翻车，拍完装备发工资也墨迹，不发工资打起了电话也是没看懂","qita":"","date":"2026-03-16"},{"id":1773641008684,"tuanpai":"不凡","tuanzhang":"","qufu":"龙虎","pingjia":"避雷","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"招募看到，贴吧搜到避雷","qita":"","date":"2026-03-16"},{"id":1773641008685,"tuanpai":"云木","tuanzhang":"","qufu":"唯满侠","pingjia":"避雷","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"招募看到，贴吧搜到避雷","qita":"","date":"2026-03-16"},{"id":1773641008686,"tuanpai":"想吃炸鸡","tuanzhang":"嘤嘤喵","qufu":"飞龙","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"段氏英雄弓月城，还行，就是组人很波折，团长亲友组人少组了一个奶妈，然后跑了一大波人","qita":"","date":"2026-03-16"},{"id":1773641008688,"tuanpai":"萝卜","tuanzhang":"喵拖车","qufu":"唯满侠","pingjia":"避雷","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"万灵英雄弓月城，老一就翻车，团长感觉指挥慢半拍，而且花间放错一次就把人T了","qita":"","date":"2026-03-16"},{"id":1773641008689,"tuanpai":"暖暖","tuanzhang":"李暖暖","qufu":"龙虎","pingjia":"可以再去","trusted":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"万灵英雄弓月城，还行，略黑","qita":"","date":"2026-03-16"}];
+  localStorage.setItem('jx3_tuanpai_records',JSON.stringify(d));
+})();
+</script>
+<!-- __BOOTSTRAP_DATA_END__ -->
+<!-- __BOOTSTRAP_DATA_START__ -->
+<script>
+/* 由 inject.py 自动生成；如需重新导入请先手动清除 localStorage */
+(function(){
+  if(localStorage.getItem('jx3_tuanpai_records'))return;
+  var d=[{"id":1773642967539,"tuanpai":"五仙教","tuanzhang":"","qufu":"","pingjia":"避雷","xingxing":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"","qita":"","date":"2026-03-16"},{"id":1773642967540,"tuanpai":"骚话","tuanzhang":"","qufu":"","pingjia":"避雷","xingxing":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"","qita":"","date":"2026-03-16"},{"id":1773642967541,"tuanpai":"书函","tuanzhang":"","qufu":"","pingjia":"避雷","xingxing":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"","qita":"","date":"2026-03-16"},{"id":1773642967542,"tuanpai":"叶冶","tuanzhang":"","qufu":"","pingjia":"避雷","xingxing":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"","qita":"","date":"2026-03-16"},{"id":1773642967543,"tuanpai":"故人","tuanzhang":"","qufu":"","pingjia":"避雷","xingxing":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"","qita":"","date":"2026-03-16"},{"id":1773642967544,"tuanpai":"翎歌","tuanzhang":"","qufu":"","pingjia":"不太想再去","xingxing":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"","qita":"","date":"2026-03-16"},{"id":1773642967545,"tuanpai":"桑木","tuanzhang":"","qufu":"","pingjia":"不太想再去","xingxing":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"躺个普通一直问有无需求，烦人","qita":"","date":"2026-03-16"},{"id":1773642967546,"tuanpai":"问星","tuanzhang":"","qufu":"","pingjia":"不太想再去","xingxing":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"牌子凑齐了，团长脾气略差，和团里气纯吵起来了，还说不踢气纯不拍东西，难评","qita":"牌子5 散件2 精简2黄字3 特效武器3","date":"2026-03-16"},{"id":1773642967547,"tuanpai":"零霜","tuanzhang":"","qufu":"","pingjia":"不太想再去","xingxing":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"离谱，普通不停翻车，虽然工资高，但是以后还是别打这个团了","qita":"","date":"2026-03-16"},{"id":1773642967548,"tuanpai":"红尘","tuanzhang":"","qufu":"","pingjia":"不太想再去","xingxing":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"一般，指挥感觉没睡醒","qita":"","date":"2026-03-16"},{"id":1773642967549,"tuanpai":"晓","tuanzhang":"段雨桐","qufu":"","pingjia":"不太想再去","xingxing":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"团长爹味略重","qita":"","date":"2026-03-16"},{"id":1773642967550,"tuanpai":"铁柱","tuanzhang":"","qufu":"","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"怎么会有这么黑的掉落","qita":"","date":"2026-03-16"},{"id":1773642967551,"tuanpai":"老乡鸡","tuanzhang":"","qufu":"","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"老6谜之纠结，不过整体还行，低价捡了个无体精简","qita":"","date":"2026-03-16"},{"id":1773642967552,"tuanpai":"金毛","tuanzhang":"","qufu":"","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"还行，团长口音略重","qita":"","date":"2026-03-16"},{"id":1773642967553,"tuanpai":"烛残","tuanzhang":"","qufu":"","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"妹妹团长，人不错，团略黑","qita":"","date":"2026-03-16"},{"id":1773642967554,"tuanpai":"十屿","tuanzhang":"","qufu":"","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"还行，拍到了定风珠","qita":"","date":"2026-03-16"},{"id":1773642967555,"tuanpai":"放假","tuanzhang":"","qufu":"","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"团长东北大哥，脾气挺好，出了特殊马","qita":"英雄太极宫牌子51111精简2黄3","date":"2026-03-16"},{"id":1773642967556,"tuanpai":"朝呢","tuanzhang":"","qufu":"","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"妹妹团长，人蛮好的，就是团挺黑","qita":"","date":"2026-03-16"},{"id":1773642967557,"tuanpai":"呱喵","tuanzhang":"","qufu":"","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"团长声音受受的，人不错，团挺黑","qita":"散件2K，牌子5K，武器5，精简2特效腰坠2Z，黄字特效武器3Z","date":"2026-03-16"},{"id":1773642967558,"tuanpai":"千雪","tuanzhang":"","qufu":"","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"还行，团长有点口音","qita":"","date":"2026-03-16"},{"id":1773642967559,"tuanpai":"枫叶泊","tuanzhang":"","qufu":"","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"挺不错","qita":"","date":"2026-03-16"},{"id":1773642967560,"tuanpai":"","tuanzhang":"苗疆预感王","qufu":"","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"还行，速度很快","qita":"","date":"2026-03-16"},{"id":1773642967561,"tuanpai":"","tuanzhang":"香岩","qufu":"","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"不错，速度很快","qita":"","date":"2026-03-16"},{"id":1773642967562,"tuanpai":"小卑微","tuanzhang":"","qufu":"","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"高铁拉煤，又快又黑","qita":"","date":"2026-03-16"},{"id":1773642967563,"tuanpai":"立青","tuanzhang":"","qufu":"","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"还不错，速度很快","qita":"","date":"2026-03-16"},{"id":1773642967564,"tuanpai":"柴堆","tuanzhang":"","qufu":"双梦","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"英雄教学团，打完了1-4，还不错!","qita":"","date":"2026-03-16"},{"id":1773642967565,"tuanpai":"沪上爷叔","tuanzhang":"齐司狐","qufu":"飞龙在天","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"又是高铁拉煤，不过团长人不错","qita":"","date":"2026-03-16"},{"id":1773642967566,"tuanpai":"十月","tuanzhang":"月无殇","qufu":"天鹅坪","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"英雄老5教学，团长人不错","qita":"","date":"2026-03-16"},{"id":1773642967567,"tuanpai":"敛秋","tuanzhang":"守城士兵","qufu":"双梦","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"英雄老5 p2教学，团长人不错","qita":"","date":"2026-03-16"},{"id":1773642967568,"tuanpai":"棠梨","tuanzhang":"舞扇","qufu":"破阵子","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"打完了英雄老5，妹子团长，人超好","qita":"","date":"2026-03-16"},{"id":1773642967569,"tuanpai":"东","tuanzhang":"隔壁老王媳妇","qufu":"绝代","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":""}],"beizhu":"大附魔略黑","qita":"","date":"2026-03-16"},{"id":1773642967570,"tuanpai":"又又","tuanzhang":"甜小又","qufu":"唯满侠","pingjia":"不太想再去","xingxing":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"英雄15速，前三补，妹子团长，指挥略乱，有点压力怪","qita":"牌子51111，散件2精简3普通武器1水特效4，TN武器半价，消补10z补10%，30z补20%，老板和大铁无消补。扫地不包精简牌子，qq群1037194174可以进群保点卡，YY1461726269","date":"2026-03-16"},{"id":1773642967571,"tuanpai":"旧","tuanzhang":"老旧","qufu":"眉间雪","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"英雄提升不带老板，搞笑团长，不过很纠结，脾气还不错，出了水特效盒子但是没拍过可恶","qita":"来YY保点卡72516056","date":"2026-03-16"},{"id":1773642967572,"tuanpai":"快乐车车","tuanzhang":"冻顶乌龙冰冰","qufu":"眉间雪","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":""}],"beizhu":"一般，妹子无界团长，略话痨","qita":"","date":"2026-03-16"},{"id":1773642967573,"tuanpai":"相思","tuanzhang":"方糖糖糖","qufu":"天鹅坪","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"英雄弓月城","xinfa":"无方"}],"beizhu":"还行，虽然翻车了几波，但是低价捡到了一个白字破招精简","qita":"组人慢保点卡：756772531；装备：2 55511 黄字腰坠水特效3z（TN半价） 白字2z；补贴：桌鱼1.5k D补3k飞刀补1k 消费10%甲人原价补；yy：1450647981","date":"2026-03-16"},{"id":1773642967574,"tuanpai":"晚来秋","tuanzhang":"一二三四五","qufu":"华乾","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":""}],"beizhu":"还不错，出了加速裤子和特效腰坠，都捡到了","qita":"","date":"2026-03-16"},{"id":1773642967575,"tuanpai":"偷偷","tuanzhang":"沈诗砚","qufu":"华乾","pingjia":"不太想再去","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":"万灵"}],"beizhu":"妹子团长，人不错，但是开怪和拍卖都太快了","qita":"","date":"2026-03-16"},{"id":1773642967576,"tuanpai":"求其","tuanzhang":"青九缘","qufu":"绝代","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"英雄弓月城","xinfa":"毒经"}],"beizhu":"复习团，还行，虽然翻车了，好歹在跨年前打完了","qita":"","date":"2026-03-16"},{"id":1773642967577,"tuanpai":"什么","tuanzhang":"鸪咕咕","qufu":"破阵子","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":"毒经"}],"beizhu":"新年第一车，还行，妹子团长，话略多","qita":"","date":"2026-03-16"},{"id":1773642967578,"tuanpai":"度几","tuanzhang":"","qufu":"","pingjia":"避雷","xingxing":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"柴堆群友避雷","qita":"","date":"2026-03-16"},{"id":1773642967579,"tuanpai":"簌","tuanzhang":"哟吼吼","qufu":"华乾","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":"段氏"}],"beizhu":"妹子团长，人很好，低价捡了不少东西","qita":"","date":"2026-03-16"},{"id":1773642967580,"tuanpai":"金鱼","tuanzhang":"腴鱼","qufu":"双梦","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":"衍天"}],"beizhu":"100起拍，也是出了不少东西","qita":"","date":"2026-03-16"},{"id":1773642967581,"tuanpai":"胖胖","tuanzhang":"阿波罗一号","qufu":"双梦","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"英雄弓月城","xinfa":"冰心"}],"beizhu":"还行吧，老五翻车一次，加速黄字手又没撕过，可恶","qita":"散件1牌子55111精简2水特效3 TN半价 过10补10 过20补20","date":"2026-03-16"},{"id":1773642967582,"tuanpai":"巴奴毛肚","tuanzhang":"焰濯","qufu":"华乾","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":"冰心"}],"beizhu":"还不错，团长声音蛮好听","qita":"","date":"2026-03-16"},{"id":1773642967583,"tuanpai":"明羽","tuanzhang":"嘲讽你过来吖","qufu":"眉间雪","pingjia":"不太想再去","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":"万灵"}],"beizhu":"又是不倒数的团长！","qita":"","date":"2026-03-16"},{"id":1773642967584,"tuanpai":"故云","tuanzhang":"小温身体健康","qufu":"双梦","pingjia":"不太想再去","xingxing":false,"combos":[{"fuben":"英雄弓月城","xinfa":"毒经"}],"beizhu":"略混乱，老五标点也不太习惯，不过10z多捡到了特效腰坠嘿嘿","qita":"","date":"2026-03-16"},{"id":1773642967585,"tuanpai":"哇","tuanzhang":"从小就调皮","qufu":"天鹅坪","pingjia":"可以再去","xingxing":true,"combos":[{"fuben":"普通弓月城","xinfa":"毒经"}],"beizhu":"闪了！！第一次闪！！好激动！！！团长人也不错，似乎是东北人","qita":"1031102539","date":"2026-03-16"},{"id":1773642967586,"tuanpai":"旺旺仙贝","tuanzhang":"小黑脸","qufu":"龙虎","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":"段氏"}],"beizhu":"还不错，打得很快","qita":"","date":"2026-03-16"},{"id":1773642967587,"tuanpai":"悟道","tuanzhang":"明月霸霸@隐归","qufu":"蝶恋花","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":"衍天"}],"beizhu":"还行吧，老五虽然翻车了几次，但是低价捡到好多东西","qita":"","date":"2026-03-16"},{"id":1773642967588,"tuanpai":"丐丐","tuanzhang":"抱团抱紧","qufu":"双梦","pingjia":"避雷","xingxing":false,"combos":[{"fuben":"英雄弓月城","xinfa":"药宗"}],"beizhu":"打得又乱，掉落又黑","qita":"cw补2老三前三补2叠加 刀补1；散件2k 牌子35551  特效精简2（TN5k）黄字3（破招2）；扫地不包牌子武器精简   鱼1k 桌子+同泽5k； 罚款351飞（1-4累计）；老五 团灭p1 3k p2 5k p3 1z   ；死亡p1 1k  p2 2k p3 3k；打扇子1亿罚1z  一亿以上每千万罚1.5k；全程视频录制及战斗事件记录（JCL）","date":"2026-03-16"},{"id":1773642967589,"tuanpai":"时光","tuanzhang":"七七呦","qufu":"双梦","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":"药宗"}],"beizhu":"还不错，打得很快","qita":"","date":"2026-03-16"},{"id":1773642967590,"tuanpai":"明悟","tuanzhang":"倚杖度众生","qufu":"飞龙在天","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"英雄弓月城","xinfa":"药宗"}],"beizhu":"还不错，虽然翻车了好久，但是团长人不错，还12z捡到了黄字裤子","qita":"1020285480","date":"2026-03-16"},{"id":1773642967591,"tuanpai":"欢","tuanzhang":"阴阳两句","qufu":"破阵子","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":"药宗"}],"beizhu":"又快又黑","qita":"群号：981835672，小5大拍，老板随缘暂3，无阴兵","date":"2026-03-16"},{"id":1773642967592,"tuanpai":"嘻嘻","tuanzhang":"临江雪","qufu":"双梦","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":"段氏"}],"beizhu":"还不错","qita":"","date":"2026-03-16"},{"id":1773642967593,"tuanpai":"21","tuanzhang":"一墨语沉香一","qufu":"唯满侠","pingjia":"不太想再去","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":"衍天"}],"beizhu":"团长人不错，但是麦太吵了","qita":"","date":"2026-03-16"},{"id":1773642967594,"tuanpai":"贼红","tuanzhang":"砚秋哥哥","qufu":"华乾","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"英雄弓月城","xinfa":"毒经"}],"beizhu":"还行吧，略牢，但是真的黑啊，而且有低于百分之5承伤吸血费","qita":"散件2 牌子55551 精简2 黄字3 T奶武器、水特效半价","date":"2026-03-16"},{"id":1773642967595,"tuanpai":"枫林晚","tuanzhang":"悍娇虎","qufu":"华乾","pingjia":"不太想再去","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":"毒经"}],"beizhu":"妹子团长，人不错，不过不太喜欢团长的声音，台湾腔太重","qita":"","date":"2026-03-16"},{"id":1773642967596,"tuanpai":"棉花糖","tuanzhang":"明教大姐大","qufu":"天鹅坪","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"英雄弓月城","xinfa":"冰心"}],"beizhu":"还不错，打的很快，不过啥也没出，群191792570","qita":"散件2K  牌子55511  武器1Z  精简2Z 黄字特效3Z   T奶半价，材料包括所有材料散件（不包括牌子，特殊），自备紫色小药磨石   ，前三2刀补1，罚款3K起","date":"2026-03-16"},{"id":1773642967597,"tuanpai":"克洛格","tuanzhang":"光头智障","qufu":"双梦","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":"冰心"}],"beizhu":"妹子团长，还不错，打得很快","qita":"","date":"2026-03-16"},{"id":1773642967598,"tuanpai":"Ta","tuanzhang":"循循善盾","qufu":"绝代","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"英雄弓月城","xinfa":"衍天"}],"beizhu":"妹子团长，很不错，打得很快","qita":"320921741","date":"2026-03-16"},{"id":1773642967599,"tuanpai":"卡布达","tuanzhang":"思君如故","qufu":"龙虎","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":"万灵"}],"beizhu":"不错，打得很快","qita":"","date":"2026-03-16"},{"id":1773642967600,"tuanpai":"红的很","tuanzhang":"一斧头一","qufu":"煎蛋","pingjia":"可以再去","xingxing":true,"combos":[{"fuben":"英雄弓月城","xinfa":"万灵"}],"beizhu":"打得很快，还出了云海，可恶，又是外功出内功，不过没人出警我嘿嘿，确实很红，2z多工资","qita":"D补看老三 ，前三补3，刀补1，散件2q  牌子35555  精简1z  2z  ，10z以上消补10%，材料本职业武器牌子精简不插","date":"2026-03-16"},{"id":1773642967601,"tuanpai":"星居阁","tuanzhang":"眠大星","qufu":"华乾","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"英雄弓月城","xinfa":"无方"}],"beizhu":"还行，掉落略黑","qita":"","date":"2026-03-16"},{"id":1773642967602,"tuanpai":"红的很","tuanzhang":"木鱼敲啊敲","qufu":"蝶恋花","pingjia":"可以再去","xingxing":true,"combos":[{"fuben":"普通弓月城","xinfa":"无方"}],"beizhu":"不错，打得很快，3000捡到了水特效嘿嘿","qita":"","date":"2026-03-16"},{"id":1773642967603,"tuanpai":"红果","tuanzhang":"布响丸喇","qufu":"破阵子","pingjia":"避雷","xingxing":false,"combos":[{"fuben":"英雄弓月城","xinfa":"毒经"}],"beizhu":"组人也慢，团长感觉也不太会，打得又乱，掉落又黑","qita":"","date":"2026-03-16"},{"id":1773642967604,"tuanpai":"相声","tuanzhang":"下雨天了@青梅煮酒","qufu":"天鹅坪","pingjia":"不太想再去","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":"毒经"}],"beizhu":"团长那个麦像隔着十万八千里，像是亲友团，还有tn补","qita":"","date":"2026-03-16"},{"id":1773642967605,"tuanpai":"雪意","tuanzhang":"君知道晓","qufu":"龙虎","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"英雄弓月城","xinfa":"冰心"}],"beizhu":"好红，出了武器盒子和精简戒指，都拍到了嘿嘿，团长人也不错，虽然感觉声音离很远","qita":"585919088，消补十万％5超二十万％10","date":"2026-03-16"},{"id":1773642967606,"tuanpai":"好事","tuanzhang":"滂臭狗爪","qufu":"双梦","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":"冰心"}],"beizhu":"妹子团长，还行，真黑啊，工资2k","qita":"","date":"2026-03-16"},{"id":1773642967607,"tuanpai":"不系舟","tuanzhang":"城絮","qufu":"华乾","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"英雄弓月城","xinfa":"衍天"}],"beizhu":"妹子团长，指挥很清晰，不过有点害怕，感觉很看重承伤","qita":"群：779308631，人满喊，·TN增益80+，断层2BOSS一半工资，断层3BOSS转老板，·图南子承伤末三D去补“溜5刀”，不会投1K给会的·拉脱个人原因死351飞，老五内场后51飞，过了不罚，·内场Q4出晚猜错猛打队友的一起罚，·提前开怪250金一次，散件2K，普通盒5K，牌35511，精简2Z，黄字特效武腰坠衍天特殊3Z（TN 半价），散全包老三前结算","date":"2026-03-16"},{"id":1773642967608,"tuanpai":"瑝珑","tuanzhang":"恋爱脑小铲","qufu":"破阵子","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":"衍天"}],"beizhu":"还行","qita":"","date":"2026-03-16"},{"id":1773642967609,"tuanpai":"宿命","tuanzhang":"一苍戍一","qufu":"幽月轮","pingjia":"可以再去","xingxing":true,"combos":[{"fuben":"英雄弓月城","xinfa":"万灵"}],"beizhu":"好红，没见过这么红外功的车","qita":"老三前3补3 /14犯错个人2k 5-235消10补10%  20补20% 玄晶300起补10% 散2 牌55511 精2，群1077954242","date":"2026-03-16"},{"id":1773642967610,"tuanpai":"星","tuanzhang":"秀秀仙子","qufu":"煎蛋","pingjia":"不太想再去","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":"万灵"}],"beizhu":"又不倒数","qita":"","date":"2026-03-16"},{"id":1773642967611,"tuanpai":"福报","tuanzhang":"剑纯重制版","qufu":"双梦","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":"段氏"}],"beizhu":"还不错","qita":"","date":"2026-03-16"},{"id":1773642967612,"tuanpai":"豆蔻","tuanzhang":"青鸟灵","qufu":"双梦","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"英雄弓月城","xinfa":"段氏"}],"beizhu":"还行吧","qita":"消补20z以上10% 不包括玄晶，刀闪了补5k（没有从老三承伤最低开始算不会1k），137330373","date":"2026-03-16"},{"id":1773642967613,"tuanpai":"宿命","tuanzhang":"一苍戊一","qufu":"煎蛋","pingjia":"可以再去","xingxing":true,"combos":[{"fuben":"英雄弓月城","xinfa":"无方"}],"beizhu":"真的蛮红，又出了外功双会手，5z3捡到了特效腰坠嘿嘿","qita":"老三前3补3 /14犯错个人2k 5-235，消10补10%  20补20% ，玄晶300起，散2 牌5 精2 衍天道具5","date":"2026-03-16"},{"id":1773642967614,"tuanpai":"老八校","tuanzhang":"广东人","qufu":"幽月轮","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":"无方"}],"beizhu":"还行，真黑啊，工资2k1","qita":"","date":"2026-03-16"},{"id":1773642967615,"tuanpai":"师太团","tuanzhang":"镇狱明王","qufu":"龙虎","pingjia":"不太想再去","xingxing":false,"combos":[{"fuben":"英雄弓月城","xinfa":"毒经"}],"beizhu":"妹子团长，感觉一般，应该是亲友团，还蛐蛐退组的奶药，也略黑","qita":"散件2K牌子5K精简2W黄字特效3W，罚款351，老五p3灭团翻倍，老三如果输出不够被卡boss，会优化最下面两个，D补看老3承伤，消补10z以上10%，40z以上补20%，老板和装绑材料不算，老五300w及格线","date":"2026-03-16"},{"id":1773642967616,"tuanpai":"哇","tuanzhang":"筱筱丽","qufu":"天鹅坪","pingjia":"可以再去","xingxing":true,"combos":[{"fuben":"普通弓月城","xinfa":"毒经"}],"beizhu":"团长似乎是东北人，挺逗","qita":"","date":"2026-03-16"},{"id":1773642967617,"tuanpai":"宿命","tuanzhang":"一秃戊一","qufu":"姨妈","pingjia":"可以再去","xingxing":true,"combos":[{"fuben":"英雄弓月城","xinfa":"冰心"}],"beizhu":"节奏真不错，挂件居然拍了10z，奇怪的工资增加了","qita":"老三前3补3 /14犯错个人2k 5-235，消10补10%  20补20% ，玄晶300起  散2 牌5 精2 衍天5Z，散件不包：精简 特效 本职业牌子","date":"2026-03-16"},{"id":1773642967618,"tuanpai":"","tuanzhang":"艾玛司","qufu":"华乾","pingjia":"不太想再去","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":"冰心"}],"beizhu":"全拍提升，一般，又是喜欢开麦和亲友聊天的团长","qita":"","date":"2026-03-16"},{"id":1773642967619,"tuanpai":"念","tuanzhang":"又闻一人念","qufu":"煎蛋","pingjia":"不太想再去","xingxing":false,"combos":[{"fuben":"英雄弓月城","xinfa":"衍天"}],"beizhu":"略难评，不太会指挥，还喜欢搞人心态","qita":"","date":"2026-03-16"},{"id":1773642967620,"tuanpai":"哇","tuanzhang":"筱筱笑笑","qufu":"天鹅坪","pingjia":"可以再去","xingxing":true,"combos":[{"fuben":"普通弓月城","xinfa":"衍天"}],"beizhu":"团长人真不错","qita":"","date":"2026-03-16"},{"id":1773642967621,"tuanpai":"宿命","tuanzhang":"一苍戌一","qufu":"绝代","pingjia":"可以再去","xingxing":true,"combos":[{"fuben":"英雄弓月城","xinfa":"段氏"}],"beizhu":"针不戳，不过好像开始黑黑的了","qita":"老三前3补3 /14犯错个人2k 5-235，消10补10%  20补20% ，玄晶300起  散2 牌5 精2 衍天5Z，散件不包：精简 特效 本职业牌子","date":"2026-03-16"},{"id":1773642967622,"tuanpai":"盆栽","tuanzhang":"我不是小心眼","qufu":"华乾","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":"段氏"}],"beizhu":"妹子团长，还行，不过有点喷麦","qita":"","date":"2026-03-16"},{"id":1773642967623,"tuanpai":"正经","tuanzhang":"似雪的朝圣言","qufu":"华乾","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"英雄弓月城","xinfa":"花间"}],"beizhu":"团长脾气不错，但是玩T有时忘记接仇","qita":"20Z以上补百分之10  补贴（桌 消 刀），T奶满层补2k","date":"2026-03-16"},{"id":1773642967624,"tuanpai":"鸿泽","tuanzhang":"祝你玩得开心","qufu":"天鹅坪","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"英雄弓月城","xinfa":"万灵"}],"beizhu":"还行，出了外功双会，不过团长麦略吵","qita":"qq群913401699，大（300起）衍天特殊3Z，老三前三补3，老四溜刀补1，散件1.牌子35551，精简2，黄字和特效3腰椎2Z，打工消补：10砖10%，20砖20%，看下扫地。猫眼石老二开打之前结算。包所有烂掉得一切不包括玄晶沙子任务道具","date":"2026-03-16"},{"id":1773642967625,"tuanpai":"小天才","tuanzhang":"楚稼君","qufu":"华乾","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":"万灵"}],"beizhu":"不错，妹子团长，声音很好听","qita":"","date":"2026-03-16"},{"id":1773642967626,"tuanpai":"奥斯卡","tuanzhang":"上官修罗","qufu":"蝶恋花","pingjia":"不太想再去","xingxing":false,"combos":[{"fuben":"英雄弓月城","xinfa":"无相"}],"beizhu":"翻车了非常波又黑，团长脾气很好不怎么罚款，但是指挥有时候慢半拍","qita":"","date":"2026-03-16"},{"id":1773642967627,"tuanpai":"苏菲教团","tuanzhang":"回纥公主","qufu":"幽月轮","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"冰心教学挑战，没过但是团长比较有耐心","qita":"","date":"2026-03-16"},{"id":1773642967628,"tuanpai":"宿命","tuanzhang":"一苍戊一","qufu":"煎蛋","pingjia":"可以再去","xingxing":true,"combos":[{"fuben":"英雄弓月城","xinfa":"无方"}],"beizhu":"老五翻车了一波，不过整体还是不错","qita":"消10补10%  20补20%，玄晶300起  散2 牌5 精2 衍天3Z，散件不包：精简 特效 本职业牌子","date":"2026-03-16"},{"id":1773642967629,"tuanpai":"冬日","tuanzhang":"响圆","qufu":"唯满侠","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":"无方"}],"beizhu":"妹子团长，声音好听，打得很快","qita":"","date":"2026-03-16"},{"id":1773642967630,"tuanpai":"宿命","tuanzhang":"一秃戊一","qufu":"蝶恋花","pingjia":"可以再去","xingxing":true,"combos":[{"fuben":"英雄弓月城","xinfa":"毒经"}],"beizhu":"很顺，但是好像变黑了——","qita":"消10补10%  20补20%，玄晶300起补5% 散2 牌5 精2 衍天3Z，散件不包：精简 特效 本职业牌子","date":"2026-03-16"},{"id":1773642967631,"tuanpai":"蚂蚁","tuanzhang":"白芷沅","qufu":"幽月轮","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":"毒经"}],"beizhu":"还行，有些队友略抽象","qita":"散件1牌子1武器2精简特效3，1041211559","date":"2026-03-16"},{"id":1773642967632,"tuanpai":"老年社团","tuanzhang":"顾厌罹","qufu":"华乾","pingjia":"不太想再去","xingxing":false,"combos":[{"fuben":"英雄弓月城","xinfa":"冰心"}],"beizhu":"略曲折，老一翻车一波，老五翻车两波，整体还行，不过精简是5k5k的加价，物价略贵（虽然没拍起来）","qita":"全拍都在, dps前三补2q，Q群：626323382","date":"2026-03-16"},{"id":1773642967633,"tuanpai":"姐姐","tuanzhang":"你的小脑斧呀","qufu":"蝶恋花","pingjia":"不太想再去","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":"冰心"}],"beizhu":"妹子团长，略墨迹，而且怎么普通老五还能翻车——","qita":"","date":"2026-03-16"},{"id":1773642967634,"tuanpai":"花胡","tuanzhang":"来根油条","qufu":"梦江南","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"英雄弓月城","xinfa":"花间"}],"beizhu":"团长脾气和水平不错，但是翻车太多一直说打完再罚款和团里明教t吵起来了（个人觉得团长问题相对比较小）","qita":"散2K牌5K精简2Z黄字3Z（单破招加速2z），老三承伤垫底默认溜刀（不会投500），消补10Z补10%","date":"2026-03-16"},{"id":1773642967635,"tuanpai":"羽鹞","tuanzhang":"","qufu":"飞龙","pingjia":"避雷","xingxing":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"小红书刷到的","qita":"在剑3，花1Z还真把自己当老板了？！ 避雷团牌：【羽鹞... http://xhslink.com/o/9rpGTOL7mV9 复制后打开【小红书】查看笔记！","date":"2026-03-16"},{"id":1773642967637,"tuanpai":"宿命","tuanzhang":"酱油晓策","qufu":"唯满侠","pingjia":"可以再去","xingxing":true,"combos":[{"fuben":"英雄弓月城","xinfa":"衍天"}],"beizhu":"7z8拍到了水特效盒子，快落","qita":"消10补10%  20补20% ，玄晶300起补5%  ，散2K 牌5K 精2Z 衍天3Z，散件不包：精简 特效 本职业牌子","date":"2026-03-16"},{"id":1773642967638,"tuanpai":"宿命","tuanzhang":"酱油晓策","qufu":"幽月轮","pingjia":"可以再去","xingxing":true,"combos":[{"fuben":"英雄弓月城","xinfa":"段氏"}],"beizhu":"又出了水特效盒子，9z1拍到了，555略贵，而且还出了衍天特效（为啥上车不出——）","qita":"","date":"2026-03-16"},{"id":1773642967639,"tuanpai":"福宝","tuanzhang":"福跑跑","qufu":"幽月轮","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":"段氏"}],"beizhu":"团长真的很话痨，好像是福建口音","qita":"群号421314831","date":"2026-03-16"},{"id":1773642967640,"tuanpai":"观云","tuanzhang":"酒酿圆子","qufu":"唯满侠","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":"衍天"}],"beizhu":"妹子团长，声音好听，还行","qita":"","date":"2026-03-16"},{"id":1773642967641,"tuanpai":"苓","tuanzhang":"萝莉好看十","qufu":"眉间雪","pingjia":"不太想再去","xingxing":false,"combos":[{"fuben":"英雄弓月城","xinfa":"冰心"}],"beizhu":"团长打法非常小众，后面翻车了三个小时发生了很多事，总体来说可以谨慎","qita":"散件2k牌子55551普通武器1【TN 半价】精简2水特3黄字4，全员【老板低消外】消费20z补10%，40z补20% 预3躺，老三boss承伤前三补3，有大阵不被断层就好断层2q，刀补1","date":"2026-03-16"},{"id":1773642967642,"tuanpai":"陆勤奋","tuanzhang":"陆勤奋","qufu":"绝代","pingjia":"不太想再去","xingxing":false,"combos":[{"fuben":"英雄弓月城","xinfa":"万灵"}],"beizhu":"老三翻一波，老四翻两波，而且有万灵还5秒倒数，难评","qita":"小5大400，演罚351离，老5长痛51离，飞刀老3承伤低的去不去投1000，打工消费10Z以上10%补贴，扫地除了沙子大铁其他烂掉全给","date":"2026-03-16"},{"id":1773642967643,"tuanpai":"金灿灿","tuanzhang":"顾玄君","qufu":"眉间雪","pingjia":"避雷","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":"万灵"}],"beizhu":"指挥得乱七八糟，一开始还是开的黑工，换个号又换的一个石头都没插的号","qita":"","date":"2026-03-16"},{"id":1773642967644,"tuanpai":"捧哽","tuanzhang":"水岸浪卷","qufu":"唯我独尊","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"英雄弓月城","xinfa":"无相"}],"beizhu":"没翻车，团长指挥也没问题","qita":"牌子33355、散1、精简1z，黄特2z","date":"2026-03-16"},{"id":1773642967645,"tuanpai":"宿命","tuanzhang":"一苍戊一","qufu":"煎蛋","pingjia":"可以再去","xingxing":true,"combos":[{"fuben":"英雄弓月城","xinfa":"无方"}],"beizhu":"黑黑的很安心（为啥又出衍天特效——又出在了没开的号上——）","qita":"","date":"2026-03-16"},{"id":1773642967646,"tuanpai":"宿命","tuanzhang":"一苍戍一","qufu":"煎蛋","pingjia":"可以再去","xingxing":true,"combos":[{"fuben":"英雄弓月城","xinfa":"衍天"}],"beizhu":"2z捡到了特效腰坠嘿嘿","qita":"","date":"2026-03-16"},{"id":1773642967647,"tuanpai":"发誓","tuanzhang":"妖娆继母","qufu":"梦江南","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":"花间"}],"beizhu":"平平无奇的一车","qita":"","date":"2026-03-16"},{"id":1773642967648,"tuanpai":"九玖","tuanzhang":"陆伊笙","qufu":"山海相逢","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":"毒经"}],"beizhu":"团长说话像幼教，但是有口音，另外开怪倒数三秒","qita":"","date":"2026-03-16"},{"id":1773642967649,"tuanpai":"宿命","tuanzhang":"一苍戍一","qufu":"绝代","pingjia":"可以再去","xingxing":true,"combos":[{"fuben":"英雄弓月城","xinfa":"毒经"}],"beizhu":"黑出新高度，工资1k7","qita":"","date":"2026-03-16"},{"id":1773642967650,"tuanpai":"宿命","tuanzhang":"一苍戌一","qufu":"绝代","pingjia":"可以再去","xingxing":true,"combos":[{"fuben":"英雄弓月城","xinfa":"冰心"}],"beizhu":"还行，好歹没上车黑","qita":"","date":"2026-03-16"},{"id":1773642967651,"tuanpai":"千岛湖","tuanzhang":"渺渺云深","qufu":"梦江南","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"英雄弓月城","xinfa":"花间"}],"beizhu":"没怎么翻车，但是组人的时候疑似开了小号凑人头","qita":"群1009378890","date":"2026-03-16"},{"id":1773642967652,"tuanpai":"HD","tuanzhang":"砍泥没@隐士","qufu":"煎蛋","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":"无方"}],"beizhu":"还行，打得挺快，不过不倒数","qita":"","date":"2026-03-16"},{"id":1773642967653,"tuanpai":"山風","tuanzhang":"我的爱妻","qufu":"天鹅坪","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":"无相"}],"beizhu":"还行就是有点黑","qita":"","date":"2026-03-16"},{"id":1773642967654,"tuanpai":"下雪了","tuanzhang":"团长他演我","qufu":"绝代","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"英雄弓月城","xinfa":"无相"}],"beizhu":"总体来说比较顺利，除了团长自己开特效害灭团以外","qita":"","date":"2026-03-16"},{"id":1773642967655,"tuanpai":"醉梦楼","tuanzhang":"南宫不二","qufu":"幽月轮","pingjia":"避雷","xingxing":false,"combos":[{"fuben":"英雄弓月城","xinfa":"段氏"}],"beizhu":"老一翻一波，老五翻六波，我真无语了，团长感觉指挥慢半拍，假身也靠团员喊","qita":"散2牌35555武器精简1特效黄字2；衍天特效4，大150起","date":"2026-03-16"},{"id":1773642967656,"tuanpai":"娱乐","tuanzhang":"戒妄","qufu":"华乾","pingjia":"避雷","xingxing":false,"combos":[{"fuben":"英雄弓月城","xinfa":"万灵"}],"beizhu":"团长全程在yy和亲友聊天，假身没验出来在团麦和别人吵架","qita":"","date":"2026-03-16"},{"id":1773642967657,"tuanpai":"欸鸭","tuanzhang":"弓千月","qufu":"长安城","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"英雄弓月城","xinfa":"毒经"}],"beizhu":"还行除了团长犯错害团灭一波，还有两拨翻车是团员的问题","qita":"","date":"2026-03-16"},{"id":1773642967658,"tuanpai":"宿命","tuanzhang":"一苍戊一","qufu":"姨妈","pingjia":"可以再去","xingxing":true,"combos":[{"fuben":"英雄弓月城","xinfa":"无方"}],"beizhu":"出了会无黄字裤子","qita":"","date":"2026-03-16"},{"id":1773642967659,"tuanpai":"金库","tuanzhang":"希达罗摩","qufu":"山海相逢","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":"无方"}],"beizhu":"还行还行","qita":"","date":"2026-03-16"},{"id":1773642967660,"tuanpai":"","tuanzhang":"兔的龙葵","qufu":"破阵子","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":"段氏"}],"beizhu":"还行吧，老五没标点翻车一波","qita":"","date":"2026-03-16"},{"id":1773642967661,"tuanpai":"二毛","tuanzhang":"喵二毛","qufu":"双梦","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":"衍天"}],"beizhu":"不错，很快","qita":"","date":"2026-03-16"},{"id":1773642967662,"tuanpai":"就喝奶茶","tuanzhang":"蘑菇","qufu":"唯我独尊","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"英雄弓月城","xinfa":"花间"}],"beizhu":"除了团长失误翻车一波没太大问题","qita":"带好小吃小药 不喜欢罚款 但别过分 多次问题优化 老三承伤及格线4.8  老五及格线3.8 不够3k （累计）","date":"2026-03-16"},{"id":1773642967663,"tuanpai":"宿命","tuanzhang":"一苍戌一","qufu":"姨妈","pingjia":"可以再去","xingxing":true,"combos":[{"fuben":"英雄弓月城","xinfa":"毒经"}],"beizhu":"还行，出了武器盒子，没拍到，可恶","qita":"","date":"2026-03-16"},{"id":1773642967664,"tuanpai":"言画","tuanzhang":"风雪原","qufu":"山海相逢","pingjia":"避雷","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":"毒经"}],"beizhu":"小铁漏插一个，老板交易不了，居然团补1k","qita":"","date":"2026-03-16"},{"id":1773642967665,"tuanpai":"就喝奶茶","tuanzhang":"陆萌","qufu":"天鹅坪","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"英雄弓月城","xinfa":"冰心"}],"beizhu":"小翻几波，就是有点黑加穷","qita":"带好小吃小药 不喜欢罚款 但别过分 多次问题优化 老三承伤及格线4.8  老五及格线3.8 不够3k （累计）","date":"2026-03-16"},{"id":1773642967666,"tuanpai":"宿命","tuanzhang":"一苍戊一","qufu":"幽月轮","pingjia":"可以再去","xingxing":true,"combos":[{"fuben":"英雄弓月城","xinfa":"段氏"}],"beizhu":"真黑啊，T奶大礼包","qita":"","date":"2026-03-16"},{"id":1773642967667,"tuanpai":"宿命","tuanzhang":"一苍戌一","qufu":"幽月轮","pingjia":"可以再去","xingxing":true,"combos":[{"fuben":"英雄弓月城","xinfa":"冰心"}],"beizhu":"黢黑，不过比上车好点","qita":"","date":"2026-03-16"},{"id":1773642967668,"tuanpai":"宿命","tuanzhang":"一苍戊一","qufu":"唯满侠","pingjia":"可以再去","xingxing":true,"combos":[{"fuben":"英雄弓月城","xinfa":"衍天"}],"beizhu":"还行，拍到了精简裤子","qita":"","date":"2026-03-16"},{"id":1773642967669,"tuanpai":"就喝奶茶","tuanzhang":"邪恶大魔王","qufu":"天鹅坪","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"英雄弓月城","xinfa":"无相"}],"beizhu":"老五翻车了很多波。有一波承伤是原定为1号点位置的人一开始站到3号点来了，然后2号点的人想去1号点帮他补。这个时候原定1号点位置的人又回头去1号点承伤，结果因为重叠团灭了。后来团长说要罚原定1号点承伤的人，因为2号点过去的人是帮他补。","qita":"","date":"2026-03-16"},{"id":1773642967670,"tuanpai":"宿命","tuanzhang":"一苍戌一","qufu":"唯满侠","pingjia":"可以再去","xingxing":true,"combos":[{"fuben":"英雄弓月城","xinfa":"万灵"}],"beizhu":"老三和老五都翻车了，不过团长情绪很稳定，黑黑的很安心","qita":"","date":"2026-03-16"},{"id":1773642967671,"tuanpai":"好耶","tuanzhang":"早安星","qufu":"唯满侠","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":"万灵"}],"beizhu":"还行","qita":"","date":"2026-03-16"},{"id":1773642967672,"tuanpai":"毛茸茸","tuanzhang":"狗狗睡睡","qufu":"双梦","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":"冰心"}],"beizhu":"还行还行","qita":"","date":"2026-03-16"},{"id":1773642967673,"tuanpai":"就喝奶茶","tuanzhang":"小猫提灯","qufu":"唯满侠","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"英雄弓月城","xinfa":"毒经"}],"beizhu":"全程没有翻车就是团长没有及时查承伤","qita":"","date":"2026-03-16"},{"id":1773642967674,"tuanpai":"宿命","tuanzhang":"傲罗米亚@唯我独尊","qufu":"唯满侠","pingjia":"可以再去","xingxing":true,"combos":[{"fuben":"英雄弓月城","xinfa":"无方"}],"beizhu":"有演员——，不过3z6捡到了武器盒子嘿嘿（不过有个田螺自己一直死还出警别人好烦人）","qita":"","date":"2026-03-16"},{"id":1773642967675,"tuanpai":"宿命","tuanzhang":"一秃戍一","qufu":"煎蛋","pingjia":"可以再去","xingxing":true,"combos":[{"fuben":"英雄弓月城","xinfa":"毒经"}],"beizhu":"高铁拉煤","qita":"","date":"2026-03-16"},{"id":1773642967676,"tuanpai":"宿命","tuanzhang":"一苍戊一","qufu":"龙虎","pingjia":"可以再去","xingxing":true,"combos":[{"fuben":"英雄弓月城","xinfa":"衍天"}],"beizhu":"可恶，破无黄字腰带撕到了10z","qita":"","date":"2026-03-16"},{"id":1773642967677,"tuanpai":"欸鸭","tuanzhang":"弓千月","qufu":"长安城","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"英雄弓月城","xinfa":"无相"}],"beizhu":"全程没翻车，团长指挥没啥问题","qita":"","date":"2026-03-16"},{"id":1773642967678,"tuanpai":"温文尔雅","tuanzhang":"爱萝莉真好一","qufu":"唯满侠","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"奶歌躺英雄弓月城，还行，打得挺快，出了奶妈特效腰坠，不知道是红还是黑hhhhh","qita":"罚款1分钟1k 单人按次数翻倍  ，装备价格 牌子 5k 散件2k 普武1z 精简1z 黄字道具2z T奶武器半价，消补10z 10% 20z 20% 玄晶5%，飞刀高达补1","date":"2026-03-16"},{"id":1773642967679,"tuanpai":"不压力","tuanzhang":"追光小娜","qufu":"双梦","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":"段氏"}],"beizhu":"全是疗愈，工资854我服了","qita":"","date":"2026-03-16"},{"id":1773642967680,"tuanpai":"不压力","tuanzhang":"烛颜","qufu":"姨妈","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":"奶药"}],"beizhu":"四奶提心吊胆奶完，还好没翻车","qita":"","date":"2026-03-16"},{"id":1773642967681,"tuanpai":"不压力","tuanzhang":"云筝筝","qufu":"双梦","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":"奶毒"}],"beizhu":"又是四奶，奶得低低的5555","qita":"","date":"2026-03-16"},{"id":1773642967682,"tuanpai":"剑镇","tuanzhang":"正德","qufu":"唯满侠","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":"万灵"}],"beizhu":"很迅速","qita":"","date":"2026-03-16"},{"id":1773642967683,"tuanpai":"宿命","tuanzhang":"一苍戊一","qufu":"姨妈","pingjia":"可以再去","xingxing":true,"combos":[{"fuben":"英雄弓月城","xinfa":"段氏"}],"beizhu":"拍到了特效腰坠嘿嘿","qita":"","date":"2026-03-16"},{"id":1773642967684,"tuanpai":"冬宫","tuanzhang":"悦色@梦江南","qufu":"乾坤一掷","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"英雄弓月城","xinfa":"花间"}],"beizhu":"团长如果单凭指挥的话没什么毛病，翻车了几波","qita":"","date":"2026-03-16"},{"id":1773642967685,"tuanpai":"急","tuanzhang":"归山河","qufu":"绝代","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"英雄弓月城","xinfa":"冰心"}],"beizhu":"还行，组人组了一个世纪，不过挺红，出了九重霄汉，没拍到可恶","qita":"","date":"2026-03-16"},{"id":1773642967686,"tuanpai":"兹白","tuanzhang":"军门七七","qufu":"山海相逢","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":"奶秀"}],"beizhu":"好多疗","qita":"","date":"2026-03-16"},{"id":1773642967687,"tuanpai":"九月","tuanzhang":"若离愁","qufu":"绝代","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":"奶歌"}],"beizhu":"挺快的","qita":"","date":"2026-03-16"},{"id":1773642967688,"tuanpai":"花月","tuanzhang":"刀盾闯天涯","qufu":"唯满侠","pingjia":"避雷","xingxing":false,"combos":[{"fuben":"英雄弓月城","xinfa":"万灵"}],"beizhu":"难评，不会玩奶花还一直出警奶花，说什么落黑子减团队dps，嘴也不干净，一直说脏话","qita":"","date":"2026-03-16"},{"id":1773642967689,"tuanpai":"销冠","tuanzhang":"劳工","qufu":"唯满侠","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"英雄弓月城","xinfa":"无方"}],"beizhu":"老四翻车一波，老五翻车三波，累了，不过团长指挥没啥问题","qita":"","date":"2026-03-16"},{"id":1773642967690,"tuanpai":"麦兜","tuanzhang":"三月兔兔","qufu":"长安城","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"英雄弓月城","xinfa":"冰心"}],"beizhu":"团长指挥安排的很快，没有翻车","qita":"","date":"2026-03-16"},{"id":1773642967691,"tuanpai":"紫剑","tuanzhang":"高声暗皱眉","qufu":"乾坤一掷","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"英雄弓月城","xinfa":"无相"}],"beizhu":"团长话很少，太简单了没有翻车","qita":"","date":"2026-03-16"},{"id":1773642967692,"tuanpai":"香猪","tuanzhang":"安莫莫","qufu":"乾坤一掷","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"英雄弓月城","xinfa":"毒经"}],"beizhu":"总体不错，团长老四说闪了给T和其他溜刀的补5000","qita":"群号：1063758667","date":"2026-03-16"},{"id":1773642967693,"tuanpai":"暖暖","tuanzhang":"菟兔堍","qufu":"长安城","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"英雄弓月城","xinfa":"冰心"}],"beizhu":"还行，出了个外功会心黄字裤子","qita":"","date":"2026-03-16"},{"id":1773642967694,"tuanpai":"小乖","tuanzhang":"墨倾颜","qufu":"龙虎","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"英雄弓月城","xinfa":"毒经"}],"beizhu":"出了九重霄汉，拍了25z，可恶，好贵","qita":"散件2   牌子35555 精简1/2   特效武器3，罚款3/5/1，无消补，衍天特效3Z起，挂Q群：953370174","date":"2026-03-16"},{"id":1773642967695,"tuanpai":"珞珈","tuanzhang":"","qufu":"","pingjia":"避雷","xingxing":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"小红书刷到的避雷","qita":"","date":"2026-03-16"},{"id":1773642967696,"tuanpai":"瑶台","tuanzhang":"漂亮军爷","qufu":"天鹅坪","pingjia":"不太想再去","xingxing":false,"combos":[{"fuben":"英雄弓月城","xinfa":"无方"}],"beizhu":"略墨迹，团长进本才开始拖宏，看不懂，打得也纠结，有TN补1k的情况下TN还一直翻车，拍完装备发工资也墨迹，不发工资打起了电话也是没看懂","qita":"","date":"2026-03-16"},{"id":1773642967697,"tuanpai":"不凡","tuanzhang":"","qufu":"龙虎","pingjia":"避雷","xingxing":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"招募看到，贴吧搜到避雷","qita":"","date":"2026-03-16"},{"id":1773642967698,"tuanpai":"云木","tuanzhang":"","qufu":"唯满侠","pingjia":"避雷","xingxing":false,"combos":[{"fuben":"","xinfa":""}],"beizhu":"招募看到，贴吧搜到避雷","qita":"","date":"2026-03-16"},{"id":1773642967699,"tuanpai":"想吃炸鸡","tuanzhang":"嘤嘤喵","qufu":"飞龙","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"英雄弓月城","xinfa":"段氏"}],"beizhu":"还行，就是组人很波折，团长亲友组人少组了一个奶妈，然后跑了一大波人","qita":"","date":"2026-03-16"},{"id":1773642967700,"tuanpai":"","tuanzhang":"柳啧啧","qufu":"双梦","pingjia":"避雷","xingxing":false,"combos":[{"fuben":"普通弓月城","xinfa":"奶秀"}],"beizhu":"爹味太重","qita":"","date":"2026-03-16"},{"id":1773642967701,"tuanpai":"萝卜","tuanzhang":"喵拖车","qufu":"唯满侠","pingjia":"避雷","xingxing":false,"combos":[{"fuben":"英雄弓月城","xinfa":"万灵"}],"beizhu":"老一就翻车，团长感觉指挥慢半拍，而且花间放错一次就把人T了","qita":"","date":"2026-03-16"},{"id":1773642967702,"tuanpai":"暖暖","tuanzhang":"李暖暖","qufu":"龙虎","pingjia":"可以再去","xingxing":false,"combos":[{"fuben":"英雄弓月城","xinfa":"万灵"}],"beizhu":"还行，略黑","qita":"","date":"2026-03-16"}];
+  localStorage.setItem('jx3_tuanpai_records',JSON.stringify(d));
+})();
+</script>
+<!-- __BOOTSTRAP_DATA_END__ -->
+</head>
+<body>
+
+<header>
+  <div class="header-brand">
+    <h1><span class="h1-icon">⚔</span>团牌记录</h1>
+    <span class="header-sub">剑网三 · 记录你的副本历程<span class="header-count-sep">|</span><span class="header-count">已收录名帖 <span id="headerCountNum">〇</span> 位</span></span>
+  </div>
+  <div class="header-actions">
+    <span class="header-season"></span>
+    <div class="header-data-center">
+      <span id="syncBadge" class="sync-badge hidden"></span>
+      <button id="btnBackup" class="btn-backup" style="display:none" onclick="manualBackup()">手动备份</button>
+    </div>
+  </div>
+</header>
+
+<nav>
+  <button class="active" onclick="switchTab('input')">录入团牌</button>
+  <button onclick="switchTab('list')">团牌列表</button>
+  <button onclick="switchTab('search')">搜索</button>
+</nav>
+
+<main>
+
+  <!-- ── TAB: 录入 ── -->
+  <div id="tab-input" class="tab-panel active">
+    <div class="card">
+      <div class="card-title" id="formTitle">📋 新增团牌记录</div>
+      <form id="recordForm" onsubmit="submitRecord(event)">
+
+        <!-- 第一层：环境 -->
+        <div class="section-divider"><span>环 境</span></div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>团牌</label>
+            <input type="text" id="f-tuanpai" autofocus oninput="autoTrustByName(this.value)">
+          </div>
+          <div class="form-group">
+            <label>团长ID</label>
+            <input type="text" id="f-tuanzhang" placeholder="游戏内ID">
+          </div>
+          <div class="form-group">
+            <label>区服</label>
+            <input type="text" id="f-qufu" placeholder="例：蝶恋花">
+          </div>
+        </div>
+
+        <!-- 第二层：参战信息 -->
+        <div class="section-divider"><span>参 战 信 息</span></div>
+
+        <!-- 4-column grid: all rows (pools, header, inputs) share the same columns -->
+        <div class="combo-builder">
+
+          <!-- Row 1: pool panels — same 4-cell flex structure as every input row -->
+          <div class="combo-row stretch">
+            <div class="fuben-cell">
+              <div class="pool-panel pool-fuben-panel">
+                <div class="pool-panel-header">
+                  <span class="pool-panel-label">常用副本</span>
+                  <button type="button" class="pool-action-btn" onclick="toggleFubenAdd()" id="fubenAddToggle">＋ 新增</button>
+                </div>
+                <div class="fuben-add-row" id="fubenAddRow">
+                  <input type="text" id="fubenInput" placeholder="输入副本名称…" onkeydown="if(event.key==='Enter'){event.preventDefault();addFuben();}">
+                  <button type="button" class="pool-action-btn" onclick="addFuben()">确认</button>
+                </div>
+                <div class="fuben-pool" id="fubenPool">
+                  <span class="fuben-pool-hint">暂无副本</span>
+                </div>
+              </div>
+            </div>
+            <span class="sep-cell"></span>
+            <div class="xinfa-cell">
+              <div class="pool-panel pool-xinfa-panel">
+                <div class="pool-panel-header">
+                  <span class="pool-panel-label">常用心法</span>
+                  <button type="button" class="pool-action-btn" onclick="openXinfaManage()">⚙ 管理</button>
+                </div>
+                <div class="xinfa-pool" id="xinfaPool">
+                  <span class="xinfa-pool-hint">加载中…</span>
+                </div>
+              </div>
+            </div>
+            <span class="del-cell-ph"></span>
+          </div>
+
+          <!-- Row 2: column header labels -->
+          <div class="combo-row">
+            <div class="fuben-cell"><span class="crh-col-label">副本</span></div>
+            <span class="sep-cell"></span>
+            <div class="xinfa-cell"><span class="crh-col-label">心法</span></div>
+            <span class="del-cell-ph"></span>
+          </div>
+
+          <!-- Rows 3+: combo input rows (added dynamically via JS) -->
+          <div id="comboRows"></div>
+
+        </div>
+
+        <!-- 第三层：评价 -->
+        <div class="section-divider"><span>评 价</span></div>
+        <div class="rating-group" id="ratingGroup">
+          <label class="rating-btn bilei">
+            <input type="radio" name="pingjia" value="避雷"> ⚠ 避雷
+          </label>
+          <label class="rating-btn buqu">
+            <input type="radio" name="pingjia" value="不太想再去"> 😐 不太想再去
+          </label>
+          <label class="rating-btn keyi">
+            <input type="radio" name="pingjia" value="可以再去"> ✓ 可以再去 <em class="keyi-star" onclick="toggleFormStar(event)">☆</em>
+          </label>
+        </div>
+
+        <!-- 第四层：详细 -->
+        <div class="section-divider"><span>详 细</span></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+          <div class="form-group">
+            <label>具体评价</label>
+            <textarea id="f-beizhu" placeholder="例：招募要求、团队氛围、攻略情况…"></textarea>
+          </div>
+          <div class="form-group">
+            <label>其他</label>
+            <textarea id="f-qita" placeholder="其他补充信息…"></textarea>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn-reset" onclick="confirmReset()">清空</button>
+          <button type="submit" class="btn-primary">保存记录</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── TAB: 列表 ── -->
+  <div id="tab-list" class="tab-panel">
+    <div class="filter-bar">
+      <button class="filter-pill active"   onclick="setFilter('all',this)">全部</button>
+      <button class="filter-pill bilei"    onclick="setFilter('避雷',this)">⚠ 避雷</button>
+      <button class="filter-pill buqu"     onclick="setFilter('不太想再去',this)">😐 不太想再去</button>
+      <button class="filter-pill keyi"     onclick="setFilter('可以再去',this)">✓ 可以再去</button>
+      <button class="filter-pill starred"  onclick="setFilter('starred',this)">★ 信任团牌</button>
+    </div>
+    <div class="table-toolbar">
+      <span class="count" id="tableCount">共 0 条记录</span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th class="th-c">评价</th>
+            <th>团牌</th>
+            <th>团长ID</th>
+            <th>区服</th>
+            <th>参战记录</th>
+            <th>具体评价</th>
+            <th>其他</th>
+            <th>日期</th>
+            <th class="th-c">操作</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── TAB: 搜索 ── -->
+  <div id="tab-search" class="tab-panel">
+    <div class="search-bar">
+      <input type="text" id="searchInput" placeholder="输入团长名号或江湖 ID 以溯往昔…" oninput="doSearch()">
+      <button onclick="doSearchAndSave()">搜索</button>
+    </div>
+    <div id="searchHistory" class="search-history"></div>
+    <div id="searchResults" class="search-results">
+      <div class="no-result">输入关键词开始搜索</div>
+    </div>
+  </div>
+
+</main>
+
+<div id="toast"></div>
+
+<div class="modal-overlay" id="xinfaManageModal">
+  <div class="modal" style="min-width:320px;max-width:400px;text-align:left;">
+    <h3 style="text-align:center;">管理常用心法</h3>
+    <div id="xinfaManageList" style="display:flex;flex-wrap:wrap;gap:8px;margin:16px 0;min-height:36px;"></div>
+    <div style="display:flex;gap:8px;margin-bottom:16px;">
+      <input type="text" id="xinfaManageInput" placeholder="新增心法名称…" style="flex:1;" onkeydown="if(event.key==='Enter'){event.preventDefault();addXinfaFromManage();}">
+      <button type="button" class="btn-sm" onclick="addXinfaFromManage()">+ 新增</button>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-primary" onclick="closeXinfaManage()">完成</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="resetModal">
+  <div class="modal">
+    <h3>确认清空</h3>
+    <div class="modal-divider"></div>
+    <p>此去无回，确定要抹除已填写的卷宗吗？</p>
+    <div class="modal-btns">
+      <button class="btn-modal-cancel" onclick="closeResetModal()">取消</button>
+      <button class="btn-modal-confirm" onclick="doReset()">确认清空</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal">
+    <h3>抹除印记</h3>
+    <div class="modal-divider"></div>
+    <p>此去经年，确定要抹除这条江湖印记吗？</p>
+    <div class="modal-btns">
+      <button class="btn-modal-cancel" onclick="closeModal()">留存</button>
+      <button class="btn-modal-confirm" onclick="confirmDelete()">抹除</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Storage ──
+const DB_KEY      = 'jx3_tuanpai_records';
+const FUBEN_KEY   = 'jx3_tuanpai_fubens';
+const XINFA_KEY   = 'jx3_tuanpai_xinfas';
+const SEARCH_HISTORY_KEY = 'jx3_tuanpai_search_history';
+
+// ── 云端同步（Google Sheets）──────────────────────────────────────────────
+// 部署 Apps Script 后，将网页应用 URL 填入下方 SHEET_URL
+const SHEET_URL = 'https://script.google.com/macros/s/AKfycbyB2KSrSdtDb1UQ4sczY76zp-ayhkCiYDW4prNOQ5ej7Dw2axIDlG_H8c_TzQEvb4lqVw/exec';
+const SHEET_KEY = '97tuanpai==key';
+
+function setSyncStatus(state) {
+  const el = document.getElementById('syncBadge');
+  if (!el) return;
+  if (!SHEET_URL) { el.className = 'sync-badge hidden'; return; }
+  const cfg = {
+    syncing: { cls: 'syncing', html: '<span class="sync-icon">↻</span> 同步中…', tip: '正在同步到云端' },
+    ok:      { cls: 'ok',      html: '☁ 已自动同步', tip: '云端数据已是最新' },
+    error:   { cls: 'error',   html: '⚠ 同步失败',   tip: '数据已保存在本地，云端同步失败' },
+  };
+  const c = cfg[state];
+  if (!c) return;
+  el.className = 'sync-badge ' + c.cls;
+  el.innerHTML = c.html;
+  el.title = c.tip;
+}
+
+// 页面加载时从 Sheet 拉取最新数据（Sheet 为多人共享的主数据源）
+async function fetchFromSheet() {
+  if (!SHEET_URL) return;
+  const btn = document.getElementById('btnBackup');
+  if (btn) btn.style.display = '';   // 显示「手动备份」按钮
+  setSyncStatus('syncing');
+  try {
+    const res  = await fetch(`${SHEET_URL}?action=getAll&key=${encodeURIComponent(SHEET_KEY)}`);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    if (Array.isArray(data) && data.length > 0) {
+      // 合并：Sheet 记录为准，但保留本地独有记录（如 py 导入但未同步的）
+      const sheetIds = new Set(data.map(r => String(r.id)));
+      const localOnly = records.filter(r => !sheetIds.has(String(r.id)));
+      records = [...data, ...localOnly];
+      localStorage.setItem(DB_KEY, JSON.stringify(records));
+      updateHeaderCount();
+      // 若当前在列表标签则刷新渲染
+      const listPanel = document.getElementById('tab-list');
+      if (listPanel && listPanel.classList.contains('active')) renderTable();
+    }
+    setSyncStatus('ok');
+  } catch (e) {
+    setSyncStatus('error');
+  }
+}
+
+// 新增 / 更新单条记录推送到 Sheet
+async function pushUpsert(record) {
+  if (!SHEET_URL) return;
+  setSyncStatus('syncing');
+  try {
+    const data = encodeURIComponent(JSON.stringify(record));
+    const res  = await fetch(`${SHEET_URL}?action=upsert&key=${encodeURIComponent(SHEET_KEY)}&data=${data}`);
+    const json = await res.json();
+    if (json.error) throw new Error(json.error);
+    setSyncStatus('ok');
+  } catch (e) {
+    setSyncStatus('error');
+  }
+}
+
+// 删除单条记录推送到 Sheet
+async function pushDelete(id) {
+  if (!SHEET_URL) return;
+  setSyncStatus('syncing');
+  try {
+    const res  = await fetch(`${SHEET_URL}?action=delete&key=${encodeURIComponent(SHEET_KEY)}&id=${encodeURIComponent(id)}`);
+    const json = await res.json();
+    if (json.error) throw new Error(json.error);
+    setSyncStatus('ok');
+  } catch (e) {
+    setSyncStatus('error');
+  }
+}
+
+// 全量同步：分批将本地所有数据上传到云端（每批 10 条，避免 URL 过长）
+async function syncAllToSheet() {
+  if (!SHEET_URL) { showToast('请先在代码中配置 SHEET_URL'); return; }
+  setSyncStatus('syncing');
+  try {
+    const BATCH = 10;
+    for (let i = 0; i < records.length; i += BATCH) {
+      const data = encodeURIComponent(JSON.stringify(records.slice(i, i + BATCH)));
+      const res  = await fetch(`${SHEET_URL}?action=upsertBatch&key=${encodeURIComponent(SHEET_KEY)}&data=${data}`);
+      const json = await res.json();
+      if (json.error) throw new Error(json.error);
+    }
+    setSyncStatus('ok');
+    showToast('✓ 已全部同步到云端');
+  } catch (e) {
+    setSyncStatus('error');
+    showToast('⚠ 同步失败，请检查网络');
+  }
+}
+
+// 手动备份到 Google Drive
+async function manualBackup() {
+  if (!SHEET_URL) { showToast('请先配置 SHEET_URL'); return; }
+  if (!records.length) { showToast('暂无记录可备份'); return; }
+  const btn = document.getElementById('btnBackup');
+  if (btn) { btn.textContent = '备份中…'; btn.disabled = true; }
+  try {
+    const res  = await fetch(`${SHEET_URL}?action=export&key=${encodeURIComponent(SHEET_KEY)}`);
+    const json = await res.json();
+    if (json.error) throw new Error(json.error);
+    showToast('✓ 备份已保存到 Google Drive');
+    window.open(json.url, '_blank');
+  } catch (e) {
+    showToast('⚠ 备份失败，请检查网络');
+  } finally {
+    if (btn) { btn.textContent = '手动备份'; btn.disabled = false; }
+  }
+}
+
+const DEFAULT_FUBENS = ['英雄弓月城', '普通弓月城'];
+const DEFAULT_XINFAS = ['冰心', '花间', '毒经', '无方', '段氏', '衍天', '万灵', '无相'];
+const HEAL_XINFAS = new Set(['奶秀','奶毒','奶花','奶药','奶歌']);
+const TANK_XINFAS = new Set(['喵T','策T','苍T','秃T']);
+function getXinfaRole(name) {
+  if (HEAL_XINFAS.has(name)) return 'heal';
+  if (TANK_XINFAS.has(name)) return 'tank';
+  return 'dps';
+}
+
+function loadRecords() { try { return JSON.parse(localStorage.getItem(DB_KEY))    || []; } catch { return []; } }
+function saveRecords(r) { localStorage.setItem(DB_KEY, JSON.stringify(r)); }
+function loadFubens()  { try { return JSON.parse(localStorage.getItem(FUBEN_KEY)) || [...DEFAULT_FUBENS]; } catch { return [...DEFAULT_FUBENS]; } }
+function saveFubens(f) { localStorage.setItem(FUBEN_KEY, JSON.stringify(f)); }
+function loadXinfas()  { try { return JSON.parse(localStorage.getItem(XINFA_KEY)) || [...DEFAULT_XINFAS]; } catch { return [...DEFAULT_XINFAS]; } }
+function saveXinfas(x) { localStorage.setItem(XINFA_KEY, JSON.stringify(x)); }
+function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+
+// ── State ──
+let records          = loadRecords();
+let fubens           = loadFubens();
+let xinfas           = loadXinfas();
+let activeFubenInput = null;  // the combo-fuben-input currently focused
+let activeXinfaInput = null;  // the combo-xinfa-input currently focused
+let currentFilter    = 'all';
+let pendingDeleteId  = null;
+let editingId        = null;
+
+// ── Tab switching ──
+function switchTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach((b,i) => {
+    b.classList.toggle('active', ['input','list','search'][i] === name);
+  });
+  document.getElementById('tab-'+name).classList.add('active');
+  if (name === 'list') renderTable();
+}
+
+// ── Fuben pool ──
+function renderFubenPool() {
+  const pool = document.getElementById('fubenPool');
+  if (!fubens.length) {
+    pool.innerHTML = '<span class="fuben-pool-hint">暂无副本，请在下方新增</span>';
+    return;
+  }
+  pool.innerHTML = fubens.map((f, i) =>
+    `<span class="fuben-chip" onclick="selectFuben(${i})">${escHtml(f)}</span>`
+  ).join('');
+}
+
+function selectFuben(idx) {
+  const name = fubens[idx];
+  // fill the focused fuben input, or the first empty one
+  let target = activeFubenInput && document.contains(activeFubenInput) ? activeFubenInput : null;
+  if (!target) {
+    const inputs = document.querySelectorAll('.combo-fuben-input');
+    target = Array.from(inputs).find(i => !i.value.trim()) || inputs[inputs.length - 1];
+  }
+  if (target) { target.value = name; target.focus(); activeFubenInput = target; }
+}
+
+function toggleFubenAdd() {
+  const row = document.getElementById('fubenAddRow');
+  const opening = !row.classList.contains('open');
+  row.classList.toggle('open', opening);
+  if (opening) document.getElementById('fubenInput').focus();
+}
+
+function addFuben() {
+  const input = document.getElementById('fubenInput');
+  const name  = input.value.trim();
+  if (!name) { showToast('请输入副本名称'); return; }
+  if (fubens.includes(name)) { showToast('该副本已存在'); return; }
+  fubens.push(name);
+  saveFubens(fubens);
+  renderFubenPool();
+  input.value = '';
+  document.getElementById('fubenAddRow').classList.remove('open');
+  showToast(`已新增副本：${name}`);
+}
+
+// ── Xinfa pool ──
+function renderXinfaPool() {
+  const pool = document.getElementById('xinfaPool');
+  if (!xinfas.length) {
+    pool.innerHTML = '<span class="xinfa-pool-hint">暂无，点击右侧管理添加</span>';
+    return;
+  }
+  pool.innerHTML = xinfas.map((x, i) =>
+    `<span class="xinfa-chip role-${getXinfaRole(x)}" onclick="selectXinfa(${i})">${escHtml(x)}</span>`
+  ).join('');
+}
+
+function selectXinfa(idx) {
+  const name = xinfas[idx];
+  let target = activeXinfaInput && document.contains(activeXinfaInput) ? activeXinfaInput : null;
+  if (!target) {
+    const inputs = document.querySelectorAll('.combo-xinfa-input');
+    target = Array.from(inputs).find(i => !i.value.trim()) || inputs[inputs.length - 1];
+  }
+  if (target) { target.value = name; target.focus(); activeXinfaInput = target; }
+  // 视觉选中态：清除全部，标记当前
+  document.querySelectorAll('.xinfa-chip').forEach(c => c.classList.remove('selected'));
+  const chips = document.querySelectorAll('.xinfa-chip');
+  if (chips[idx]) chips[idx].classList.add('selected');
+}
+
+// ── Xinfa manage modal ──
+function openXinfaManage() {
+  renderXinfaManageList();
+  document.getElementById('xinfaManageModal').classList.add('open');
+}
+function closeXinfaManage() {
+  document.getElementById('xinfaManageModal').classList.remove('open');
+}
+function renderXinfaManageList() {
+  const container = document.getElementById('xinfaManageList');
+  if (!xinfas.length) {
+    container.innerHTML = '<span style="color:var(--text-dim);font-size:0.85rem;">暂无，请在下方新增</span>';
+    return;
+  }
+  container.innerHTML = xinfas.map((x, i) =>
+    `<span class="xinfa-manage-chip">${escHtml(x)}<button onclick="removeXinfa(${i})" title="删除">×</button></span>`
+  ).join('');
+}
+function addXinfaFromManage() {
+  const input = document.getElementById('xinfaManageInput');
+  const name  = input.value.trim();
+  if (!name) return;
+  if (xinfas.includes(name)) { showToast('该心法已存在'); return; }
+  xinfas.push(name);
+  saveXinfas(xinfas);
+  renderXinfaPool();
+  renderXinfaManageList();
+  input.value = '';
+}
+function removeXinfa(idx) {
+  xinfas.splice(idx, 1);
+  saveXinfas(xinfas);
+  renderXinfaPool();
+  renderXinfaManageList();
+}
+
+// ── Combo rows ──
+function addComboRow(fuben = '', xinfa = '') {
+  const rows = document.getElementById('comboRows');
+  const div  = document.createElement('div');
+  div.className = 'combo-row combo-row-item';
+  div.innerHTML = `
+    <div class="fuben-cell"><input type="text" class="combo-fuben-input" placeholder="请输入或上方点选副本" value="${escHtml(fuben)}"></div>
+    <span class="sep-cell"></span>
+    <div class="xinfa-cell"><input type="text" class="combo-xinfa-input" placeholder="心法（如：奶秀）" value="${escHtml(xinfa)}"></div>
+    <button type="button" class="combo-row-del" title="删除此行" onclick="removeComboRow(this)">×</button>
+  `;
+  div.querySelector('.combo-fuben-input').addEventListener('focus', e => { activeFubenInput = e.target; });
+  div.querySelector('.combo-xinfa-input').addEventListener('focus', e => { activeXinfaInput = e.target; });
+  rows.appendChild(div);
+  updateRowDelBtns();
+}
+
+function removeComboRow(btn) {
+  btn.closest('.combo-row-item').remove();
+  updateRowDelBtns();
+}
+
+function updateRowDelBtns() {
+  const rows = document.querySelectorAll('.combo-row-item');
+  rows.forEach(row => {
+    row.querySelector('.combo-row-del').style.visibility = rows.length > 1 ? 'visible' : 'hidden';
+  });
+}
+
+function getCombosFromRows() {
+  return Array.from(document.querySelectorAll('.combo-row-item'))
+    .map(row => ({
+      fuben: row.querySelector('.combo-fuben-input').value.trim(),
+      xinfa: row.querySelector('.combo-xinfa-input').value.trim()
+    }))
+    .filter(c => c.fuben || c.xinfa);
+}
+
+function initComboRows(combos) {
+  document.getElementById('comboRows').innerHTML = '';
+  activeFubenInput = null;
+  activeXinfaInput = null;
+  if (combos && combos.length) combos.forEach(c => addComboRow(c.fuben, c.xinfa));
+  else addComboRow();
+}
+
+// ── Rating buttons ──
+let formXingxing = false;
+
+document.querySelectorAll('.rating-btn').forEach(btn => {
+  btn.addEventListener('click', (e) => {
+    if (e.target.classList.contains('keyi-star')) return; // star handled separately
+    const wasKeyi = btn.classList.contains('keyi');
+    document.querySelectorAll('.rating-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    if (!wasKeyi) {
+      // switched away from or never was 可以再去 — reset star
+      formXingxing = false;
+      const star = document.querySelector('.keyi-star');
+      if (star) star.classList.remove('lit');
+    }
+  });
+});
+
+function autoTrustByName(name) {
+  if (editingId) return; // 编辑模式不干预
+  const n = name.trim();
+  if (!n) return;
+  const trusted = records.some(r => r.tuanpai === n && r.xingxing);
+  if (trusted === formXingxing) return;
+  formXingxing = trusted;
+  const star   = document.querySelector('.keyi-star');
+  const keyiBtn = document.querySelector('.rating-btn.keyi');
+  if (!star) return;
+  star.classList.toggle('lit', trusted);
+  star.textContent = trusted ? '★' : '☆';
+  if (keyiBtn) keyiBtn.classList.toggle('trust-glow', trusted);
+  if (trusted) showToast('⭐ 检测到信任团牌，已自动标记');
+}
+
+function toggleFormStar(e) {
+  e.stopPropagation();
+  const star = e.currentTarget;
+  formXingxing = !formXingxing;
+  star.classList.toggle('lit', formXingxing);
+  const keyiBtn = document.querySelector('.rating-btn.keyi');
+  if (formXingxing) {
+    star.textContent = '★';
+    star.classList.remove('bounce');
+    void star.offsetWidth;
+    star.classList.add('bounce');
+    if (keyiBtn) keyiBtn.classList.add('trust-glow');
+    showToast('⭐ 已标记为信任团');
+  } else {
+    star.textContent = '☆';
+    if (keyiBtn) keyiBtn.classList.remove('trust-glow');
+  }
+}
+
+// ── Form submit ──
+function submitRecord(e) {
+  e.preventDefault();
+  const pingjia = document.querySelector('input[name="pingjia"]:checked')?.value;
+  if (!pingjia) { showToast('请选择评价'); return; }
+
+  const origTime = editingId
+    ? (records.find(r => String(r.id) === String(editingId))?.time ?? '')
+    : new Date().toLocaleDateString('zh-CN');
+
+  const record = {
+    id:       editingId || genId(),
+    tuanpai:  document.getElementById('f-tuanpai').value.trim(),
+    tuanzhang:document.getElementById('f-tuanzhang').value.trim(),
+    qufu:     document.getElementById('f-qufu').value.trim(),
+    pingjia,
+    combos:   getCombosFromRows(),
+    beizhu:   document.getElementById('f-beizhu').value.trim(),
+    qita:     document.getElementById('f-qita').value.trim(),
+    xingxing: pingjia === '可以再去' ? formXingxing : false,
+    time:     origTime
+  };
+
+  if (editingId) {
+    const idx = records.findIndex(r => String(r.id) === String(editingId));
+    if (idx !== -1) { records[idx] = record; }
+    editingId = null;
+    document.getElementById('formTitle').textContent = '📋 新增团牌记录';
+  } else {
+    records.unshift(record);
+  }
+
+  saveRecords(records);
+  pushUpsert(record);
+  updateHeaderCount();
+  resetForm();
+  showToast('记录已保存！');
+}
+
+function resetForm() {
+  ['f-tuanpai','f-tuanzhang','f-qufu','f-beizhu','f-qita'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.querySelectorAll('input[name="pingjia"]').forEach(r => r.checked = false);
+  document.querySelectorAll('.rating-btn').forEach(b => b.classList.remove('selected'));
+  formXingxing = false;
+  const fstar = document.querySelector('.keyi-star');
+  if (fstar) { fstar.classList.remove('lit', 'bounce'); fstar.textContent = '☆'; }
+  const keyiBtn = document.querySelector('.rating-btn.keyi');
+  if (keyiBtn) keyiBtn.classList.remove('trust-glow');
+  editingId = null;
+  document.getElementById('formTitle').textContent = '📋 新增团牌记录';
+  renderFubenPool();
+  initComboRows();
+}
+
+// ── Helpers ──
+function ratingClass(p) {
+  return p === '避雷' ? 'bilei' : p === '不太想再去' ? 'buqu' : p === '可以再去' ? 'keyi' : '';
+}
+
+// Backward-compat: old records may have fuben/jiaose strings instead of combos array
+function getCombos(r) {
+  if (Array.isArray(r.combos) && r.combos.length) return r.combos;
+  const fuben = r.fuben || '', xinfa = r.jiaose || '';
+  if (fuben || xinfa) return [{fuben, xinfa}];
+  return [];
+}
+
+function renderTableCombos(combos) {
+  const filled = combos.filter(c => c.fuben || c.xinfa);
+  if (!filled.length) return '<span style="color:var(--border)">—</span>';
+  return `<div class="table-combos">${filled.map(c => {
+    const f = escHtml(c.fuben), x = escHtml(c.xinfa);
+    return `<span class="table-combo-chip">
+      ${f ? `<span class="tcc-fuben">${f}</span>` : ''}
+      ${f && x ? `<span class="tcc-sep">｜</span>` : ''}
+      ${x ? `<span class="tcc-xinfa">${x}</span>` : ''}
+    </span>`;
+  }).join('')}</div>`;
+}
+
+function renderSearchCombos(combos) {
+  return combos.filter(c => c.fuben || c.xinfa).map(c => {
+    const f = escHtml(c.fuben), x = escHtml(c.xinfa);
+    return `<span class="table-combo-chip">
+      ${f ? `<span class="tcc-fuben">${f}</span>` : ''}
+      ${f && x ? `<span class="tcc-sep">｜</span>` : ''}
+      ${x ? `<span class="tcc-xinfa">${x}</span>` : ''}
+    </span>`;
+  }).join('');
+}
+
+// ── Table ──
+function renderTable() {
+  let data = records;
+  if (currentFilter === 'starred') data = data.filter(r => r.xingxing && r.pingjia === '可以再去');
+  else if (currentFilter !== 'all') data = data.filter(r => r.pingjia === currentFilter);
+
+  document.getElementById('tableCount').textContent = `共 ${data.length} 条记录`;
+  const tbody = document.getElementById('tableBody');
+
+  if (!data.length) {
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state">
+      <div class="empty-icon">📜</div>
+      <div class="empty-title">暂无记录</div>
+      <div class="empty-hint">快去「录入团牌」留下你的第一笔江湖足迹吧！</div>
+    </div></td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = data.map(r => {
+    const cls      = ratingClass(r.pingjia);
+    const canStar  = r.pingjia === '可以再去';
+    const combos   = getCombos(r);
+    const ratingIcon = r.pingjia === '避雷' ? '⚠' : r.pingjia === '不太想再去' ? '😐' : '✓';
+    return `<tr class="${r.xingxing && canStar ? 'row-starred' : ''}">
+      <td class="rating-cell ${cls}"><span class="rating-badge">${ratingIcon} ${escHtml(r.pingjia)}</span></td>
+      <td>
+        <div class="tuanpai-cell">
+          ${canStar
+            ? `<button class="star-toggle ${r.xingxing?'starred':''}" onclick="toggleStar('${r.id}')" data-tip="${r.xingxing?'取消信任':'标记为信任团牌'}">${r.xingxing?'★':'☆'}</button>`
+            : '<span class="star-ph"></span>'}
+          <strong>${escHtml(r.tuanpai || '—')}</strong>
+        </div>
+      </td>
+      <td>${escHtml(r.tuanzhang || '—')}</td>
+      <td>${escHtml(r.qufu || '—')}</td>
+      <td>${renderTableCombos(combos)}</td>
+      <td class="truncate" title="${escHtml(r.beizhu)}">${escHtml(r.beizhu || '—')}</td>
+      <td class="truncate" title="${escHtml(r.qita)}">${escHtml(r.qita || '—')}</td>
+      <td style="white-space:nowrap;color:var(--text-dim);font-size:0.8rem">${escHtml(r.time || '')}</td>
+      <td>
+        <div class="action-btns">
+          <button class="btn-icon edit" onclick="editRecord('${r.id}')"   data-tip="编辑">✎</button>
+          <button class="btn-icon del"  onclick="deleteRecord('${r.id}')" data-tip="删除">🗑</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function setFilter(f, el) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  renderTable();
+}
+
+function toggleStar(id) {
+  const r = records.find(r => String(r.id) === String(id));
+  if (!r || r.pingjia !== '可以再去') return;
+  r.xingxing = !r.xingxing;
+  saveRecords(records);
+  renderTable();
+  showToast(r.xingxing ? '⭐ 已标记为信任团牌' : '取消信任标记');
+}
+
+// ── Edit ──
+function editRecord(id) {
+  const sid = String(id);
+  const r = records.find(r => String(r.id) === sid);
+  if (!r) return;
+  switchTab('input');
+  editingId = id;
+  document.getElementById('formTitle').textContent = '✏ 编辑团牌记录';
+  document.getElementById('f-tuanpai').value   = r.tuanpai   || '';
+  document.getElementById('f-tuanzhang').value = r.tuanzhang || '';
+  document.getElementById('f-qufu').value      = r.qufu      || '';
+  document.getElementById('f-beizhu').value    = r.beizhu    || '';
+  document.getElementById('f-qita').value      = r.qita      || '';
+  document.querySelectorAll('input[name="pingjia"]').forEach(radio => {
+    radio.checked = radio.value === r.pingjia;
+  });
+  document.querySelectorAll('.rating-btn').forEach(btn => {
+    btn.classList.toggle('selected', btn.querySelector('input').value === r.pingjia);
+  });
+  formXingxing = !!r.xingxing;
+  const fstar = document.querySelector('.keyi-star');
+  if (fstar) { fstar.classList.toggle('lit', formXingxing); fstar.textContent = formXingxing ? '★' : '☆'; }
+  renderFubenPool();
+  initComboRows(getCombos(r));
+  window.scrollTo(0, 0);
+}
+
+// ── Delete ──
+function deleteRecord(id) { pendingDeleteId = String(id); document.getElementById('confirmModal').classList.add('open'); }
+function closeModal()      { document.getElementById('confirmModal').classList.remove('open'); pendingDeleteId = null; }
+function confirmDelete() {
+  if (pendingDeleteId == null) return;
+  records = records.filter(r => String(r.id) !== pendingDeleteId);
+  saveRecords(records);
+  pushDelete(pendingDeleteId);
+  updateHeaderCount();
+  closeModal();
+  renderTable();
+  showToast('记录已删除');
+}
+
+// ── Search ──
+function loadSearchHistory() {
+  try { return JSON.parse(localStorage.getItem(SEARCH_HISTORY_KEY) || '[]'); } catch { return []; }
+}
+function saveToSearchHistory(q) {
+  if (!q) return;
+  const hist = loadSearchHistory().filter(h => h !== q);
+  hist.unshift(q);
+  localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(hist.slice(0, 5)));
+  renderSearchHistory();
+}
+function clearSearchHistory() {
+  localStorage.removeItem(SEARCH_HISTORY_KEY);
+  renderSearchHistory();
+}
+function renderSearchHistory() {
+  const hist = loadSearchHistory();
+  const el = document.getElementById('searchHistory');
+  if (!el || !hist.length) { if (el) el.innerHTML = ''; return; }
+  el.innerHTML = '<span class="search-history-label">近期搜索</span>' +
+    hist.map((h, i) => `<button class="search-history-chip" onclick="doHistorySearch(${i})">${escHtml(h)}</button>`).join('') +
+    '<button class="search-history-clear" onclick="clearSearchHistory()" title="清空记录">🗑</button>';
+}
+function doHistorySearch(idx) {
+  const q = loadSearchHistory()[idx];
+  if (!q) return;
+  document.getElementById('searchInput').value = q;
+  saveToSearchHistory(q);
+  doSearch();
+}
+// 只搜索，不记录（oninput 实时过滤用）
+function doSearch() {
+  const q = document.getElementById('searchInput').value.trim().toLowerCase();
+  const container = document.getElementById('searchResults');
+  if (!q) { container.innerHTML = '<div class="no-result">输入关键词开始搜索</div>'; return; }
+
+  const results = records
+    .filter(r =>
+      (r.tuanpai  || '').toLowerCase().includes(q) ||
+      (r.tuanzhang|| '').toLowerCase().includes(q)
+    )
+    .sort((a, b) => (b.xingxing ? 1 : 0) - (a.xingxing ? 1 : 0));
+  if (!results.length) { container.innerHTML = '<div class="no-result">没有找到相关团牌记录</div>'; return; }
+
+  container.innerHTML = results.map(r => {
+    const cls     = ratingClass(r.pingjia);
+    const hasStar = r.pingjia === '可以再去' && r.xingxing;
+    const combos  = getCombos(r);
+    const beizhu  = (r.beizhu || '').trim();
+    const qita    = (r.qita   || '').trim();
+    const ratingIcon = r.pingjia === '避雷' ? '⚠' : r.pingjia === '不太想再去' ? '😐' : '✓';
+    const stampMap  = { '避雷': ['诫','bilei'], '可以再去': ['良','keyi'] };
+    const stampInfo = stampMap[r.pingjia];
+    const stamp = stampInfo ? `<div class="sc-stamp ${stampInfo[1]}">${stampInfo[0]}</div>` : '';
+    return `<div class="search-card">
+      ${stamp}
+      <div class="sc-header">
+        <span class="rating-badge ${cls}">${ratingIcon} ${escHtml(r.pingjia)}</span>
+        <span class="search-tuanpai">${escHtml(r.tuanpai || '（无团牌名）')}</span>
+        ${hasStar ? '<span class="search-star">★</span>' : ''}
+      </div>
+      <div class="search-meta">
+        ${r.tuanzhang ? `<span><i class="mi">✦</i>${escHtml(r.tuanzhang)}</span>` : ''}
+        ${r.qufu      ? `<span><i class="mi">◉</i>${escHtml(r.qufu)}</span>`      : ''}
+        ${r.time      ? `<span><i class="mi">◷</i>${formatDateChinese(r.time)}</span>` : ''}
+      </div>
+      ${combos.some(c => c.fuben || c.xinfa) ? `<div class="search-combos">${renderSearchCombos(combos)}</div>` : ''}
+      ${(beizhu || qita) ? `<div class="search-notes">
+        ${beizhu ? escHtml(beizhu) : ''}
+        ${beizhu && qita ? '<div class="notes-divider"></div>' : ''}
+        ${qita ? `<div class="notes-qita"><span class="notes-qita-label">记</span>${escHtml(qita)}</div>` : ''}
+      </div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+// ── Toast ──
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ── Utils ──
+function formatDateChinese(dateStr) {
+  if (!dateStr) return '';
+  const parts = dateStr.replace(/\//g, '-').split('-');
+  if (parts.length < 2) return dateStr;
+  const han = ['〇','一','二','三','四','五','六','七','八','九'];
+  const yearHan = String(parts[0]).split('').map(c => han[+c] ?? c).join('');
+  const month = parseInt(parts[1], 10);
+  const day   = parts[2] ? parseInt(parts[2], 10) : 0;
+  const toHanNum = n => {
+    if (n <= 0) return '';
+    if (n <= 9)  return han[n];
+    if (n === 10) return '十';
+    if (n < 20)  return '十' + han[n - 10];
+    if (n === 20) return '二十';
+    if (n < 30)  return '二十' + han[n - 20];
+    if (n === 30) return '三十';
+    return '三十' + han[n - 30];
+  };
+  const monthHan = toHanNum(month);
+  const dayHan   = day ? toHanNum(day) + '日' : '';
+  return `${yearHan}年 · ${monthHan}月${dayHan ? dayHan : ''}`;
+}
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function confirmReset() { document.getElementById('resetModal').classList.add('open'); }
+function closeResetModal() { document.getElementById('resetModal').classList.remove('open'); }
+function doReset() { closeResetModal(); resetForm(); }
+
+document.getElementById('xinfaManageModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeXinfaManage(); });
+document.getElementById('resetModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeResetModal(); });
+document.getElementById('confirmModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+// 点击搜索按钮 / 回车时才记录历史
+function doSearchAndSave() {
+  const q = document.getElementById('searchInput').value.trim();
+  saveToSearchHistory(q);
+  doSearch();
+}
+document.getElementById('searchInput').addEventListener('keydown', e => { if (e.key === 'Enter') doSearchAndSave(); });
+
+// ── 汉字计数 ──
+function toChineseNum(n) {
+  if (n === 0) return '〇';
+  const d = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
+  if (n < 10)  return d[n];
+  if (n < 20)  return n === 10 ? '十' : '十' + d[n % 10];
+  if (n < 100) return d[Math.floor(n / 10)] + '十' + (n % 10 ? d[n % 10] : '');
+  return String(n);
+}
+function updateHeaderCount() {
+  const el = document.getElementById('headerCountNum');
+  if (el) el.textContent = toChineseNum(records.length);
+}
+
+// ── 节气 ──
+function getCurrentJieqi() {
+  // 近似日期表（适用于2024-2028，误差±1天）
+  const terms = [
+    ['小寒',  1,  6], ['大寒',  1, 20],
+    ['立春',  2,  4], ['雨水',  2, 19],
+    ['惊蛰',  3,  6], ['春分',  3, 21],
+    ['清明',  4,  5], ['谷雨',  4, 20],
+    ['立夏',  5,  6], ['小满',  5, 21],
+    ['芒种',  6,  6], ['夏至',  6, 21],
+    ['小暑',  7,  7], ['大暑',  7, 23],
+    ['立秋',  8,  7], ['处暑',  8, 23],
+    ['白露',  9,  8], ['秋分',  9, 23],
+    ['寒露', 10,  8], ['霜降', 10, 23],
+    ['立冬', 11,  7], ['小雪', 11, 22],
+    ['大雪', 12,  7], ['冬至', 12, 22],
+  ];
+  const now = new Date();
+  const m = now.getMonth() + 1, d = now.getDate();
+  // 找最近一个已过或当天的节气
+  let current = terms[terms.length - 1][0];
+  for (let i = terms.length - 1; i >= 0; i--) {
+    const [name, tm, td] = terms[i];
+    if (m > tm || (m === tm && d >= td)) { current = name; break; }
+  }
+  return current;
+}
+function updateJieqiBadge() {
+  const el = document.querySelector('.header-season');
+  if (el) el.textContent = getCurrentJieqi().split('').join(' ');
+}
+
+// ── Init ──
+updateHeaderCount();
+updateJieqiBadge();
+renderFubenPool();
+renderXinfaPool();
+initComboRows();
+renderSearchHistory();
+fetchFromSheet();  // 拉取云端最新数据（SHEET_URL 为空则跳过）
+</script>
+</body>
+</html>
