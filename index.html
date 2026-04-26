@@ -338,12 +338,35 @@
     /* fuben chips */
     .fuben-pool { display: flex; flex-wrap: wrap; gap: 5px; align-items: flex-start; flex: 1; }
     .fuben-chip {
+      display: inline-flex; align-items: center;
       background: #FFFFFF; border: 1px solid #D8D0C4;
-      border-radius: 12px; padding: 3px 11px; font-size: 0.8rem;
-      cursor: pointer; transition: all 0.15s; color: var(--text-dim); user-select: none;
+      border-radius: 12px; padding: 3px 8px 3px 11px; font-size: 0.8rem;
+      cursor: pointer; transition: background 0.15s, border-color 0.15s, color 0.15s;
+      color: var(--text-dim); user-select: none;
     }
     .fuben-chip:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
     .fuben-chip.selected { background: var(--accent-light); border-color: var(--accent); color: var(--accent); font-weight: bold; }
+    .fuben-chip.deleting { background: rgba(192,57,43,0.08) !important; border-color: #C0392B !important; }
+    .fuben-chip-del {
+      position: relative; margin-left: 3px; padding: 0 4px;
+      font-size: 0.78rem; line-height: 1;
+      color: rgba(139,109,63,0.55); cursor: pointer;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.15s, color 0.15s;
+    }
+    .fuben-chip:hover .fuben-chip-del { opacity: 1; pointer-events: auto; }
+    .fuben-chip-del:hover { color: #C0392B !important; }
+    .fuben-chip-del::after {
+      content: attr(data-tip);
+      position: absolute; bottom: calc(100% + 6px); left: 50%;
+      transform: translateX(-50%) translateY(5px);
+      background: #2A2018; color: #F5EFE6;
+      padding: 3px 8px; border-radius: 5px; font-size: 0.72rem; white-space: nowrap;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+    }
+    .fuben-chip-del:hover::after { opacity: 1; transform: translateX(-50%) translateY(0); }
     .fuben-pool-hint { font-size: 0.78rem; color: #BBAA99; }
 
     /* xinfa chips — uniform grid, 4 per row */
@@ -643,6 +666,12 @@
       box-shadow: 0 4px 20px rgba(60,40,10,0.12);
     }
     #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    #toast.show.interactive { pointer-events: auto; }
+    .toast-undo-btn {
+      margin-left: 10px; cursor: pointer;
+      color: #8B6D3F; text-decoration: underline; font-size: 0.85rem; font-weight: normal;
+    }
+    .toast-undo-btn:hover { color: var(--accent); }
     .modal-overlay {
       display: none; position: fixed; inset: 0;
       background: rgba(40,30,20,0.48); z-index: 1000; align-items: center; justify-content: center;
@@ -1117,7 +1146,7 @@ function renderFubenPool() {
     return;
   }
   pool.innerHTML = fubens.map((f, i) =>
-    `<span class="fuben-chip" onclick="selectFuben(${i})">${escHtml(f)}</span>`
+    `<span class="fuben-chip" onclick="selectFuben(${i})">${escHtml(f)}<span class="fuben-chip-del" onclick="event.stopPropagation();deleteFuben(${i})" data-tip="删除">×</span></span>`
   ).join('');
 }
 
@@ -1130,6 +1159,23 @@ function selectFuben(idx) {
     target = Array.from(inputs).find(i => !i.value.trim()) || inputs[inputs.length - 1];
   }
   if (target) { target.value = name; target.focus(); activeFubenInput = target; }
+}
+
+function deleteFuben(idx) {
+  const chip = document.querySelectorAll('.fuben-chip')[idx];
+  if (chip) chip.classList.add('deleting');
+  setTimeout(() => {
+    const name = fubens[idx];
+    fubens.splice(idx, 1);
+    saveFubens(fubens);
+    renderFubenPool();
+    showUndoToast(`已删除副本：${escHtml(name)}`, () => {
+      fubens.splice(idx, 0, name);
+      saveFubens(fubens);
+      renderFubenPool();
+      showToast(`已恢复副本：${name}`);
+    });
+  }, 160);
 }
 
 function toggleFubenAdd() {
@@ -1589,10 +1635,26 @@ function doSearch() {
 }
 
 // ── Toast ──
+let _toastTimer = null;
 function showToast(msg) {
+  clearTimeout(_toastTimer);
   const t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2200);
+  t.textContent = msg;
+  t.classList.remove('interactive');
+  t.classList.add('show');
+  _toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+function showUndoToast(htmlMsg, onUndo) {
+  clearTimeout(_toastTimer);
+  const t = document.getElementById('toast');
+  t.innerHTML = `${htmlMsg}<span class="toast-undo-btn" id="toastUndoBtn">撤销</span>`;
+  t.classList.add('show', 'interactive');
+  document.getElementById('toastUndoBtn').onclick = () => {
+    clearTimeout(_toastTimer);
+    t.classList.remove('show', 'interactive');
+    onUndo();
+  };
+  _toastTimer = setTimeout(() => t.classList.remove('show', 'interactive'), 4000);
 }
 
 // ── Utils ──
